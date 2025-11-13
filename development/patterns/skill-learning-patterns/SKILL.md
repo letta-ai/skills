@@ -150,6 +150,158 @@ Letta docs. Previous approach caused data loss 2/3 times."
 
 ❌ **Deleting context** - Removing information that might help others
 
+## Common Pitfalls
+
+Even well-intentioned contributions can miss the mark. Here are patterns to watch for:
+
+### Pitfall 1: The Specificity Trap
+
+**Pattern:** Documenting your specific solution instead of extracting the general pattern.
+
+**Example - TOO SPECIFIC:**
+```
+Skill: git-workflow-manager
+Content: "Always end commits with: Written by Cameron ◯ Letta Code"
+Problem: This is Cameron's personal preference, not general knowledge
+```
+
+**Example - APPROPRIATELY GENERAL:**
+```
+Skill: git-workflow-manager (revised concept)
+Content: "Check repository for commit conventions in CONTRIBUTING.md or recent commits"
+Better: Teaches pattern of discovering conventions, applies to any repository
+```
+
+**How to avoid:**
+- Ask: "Would this help an agent on a completely different project?"
+- Look for personal names, specific URLs, environment-specific configs
+- Extract the pattern, not just your implementation
+
+### Pitfall 2: Documentation vs. Specialized Knowledge
+
+**Pattern:** Creating skills that just reformat well-known documentation.
+
+**Example - JUST DOCUMENTATION:**
+```
+Skill: "How to use git"
+Content: Explains git commands, branching, committing, PR creation
+Problem: This is standard git knowledge available everywhere
+```
+
+**Example - SPECIALIZED KNOWLEDGE:**
+```
+Skill: "mcp-builder" (in this repository)
+Content: Patterns for creating MCP servers - not just "how to use the MCP protocol" 
+but specific guidance on tool design, error handling patterns, testing strategies
+Better: Takes general protocol knowledge and adds specialized patterns for building quality servers
+```
+
+**How to avoid:**
+- If official docs cover it well, link to docs instead of recreating
+- Ask: "What specialized insight am I adding beyond standard documentation?"
+- Focus on non-obvious patterns, edge cases, or agent-specific considerations
+
+### Pitfall 3: Over-Generalizing From One Instance
+
+**Pattern:** "I made one mistake" → "Let's create 3 new skills to prevent it"
+
+**Real example from this repository (November 2025):**
+```
+Observation: One agent submitted overly-specific git-workflow-manager skill
+Initial reaction: "We need CULTURE.md + 3 new skills (knowledge-curation, 
+agent-human-collaboration, pattern-recognition) + extended documentation"
+Correction: Another agent called this out as the exact over-generalization we warn against
+Right-sized solution: Add this "Common Pitfalls" section instead
+Learning: The system worked - peer review caught premature abstraction
+```
+
+**How to avoid:**
+- Count your data points: 1 occurrence = note it, 3+ = consider contributing
+- Check if existing skill can be extended instead of creating new one
+- Ask: "Am I solving a real recurring problem or reacting to one experience?"
+
+### Pitfall 4: The Abstraction Ladder Confusion
+
+Understanding where your learning sits on the abstraction ladder:
+
+**Level 1 - Specific Solution (TOO LOW for skills):**
+```
+"I configured Firebase Auth with Google OAuth by setting these environment 
+variables and calling these specific API endpoints"
+→ Too specific, only helps others using Firebase + Google OAuth
+```
+
+**Level 2 - Pattern (GOOD for skills):**
+```
+"OAuth integration strategies: Provider discovery, token management, callback 
+handling, session persistence. Applies to Google, GitHub, Microsoft, etc."
+→ General enough to help with any OAuth integration
+```
+
+**Level 3 - Principle (ALSO GOOD for skills):**
+```
+"Delegating authentication to specialized providers: Trade-offs between 
+managed auth services vs. self-hosted, security considerations, user experience"
+→ Helps with authentication decisions broadly
+```
+
+**Where to contribute:**
+- Level 1: Keep in project-specific docs or memory, not skills
+- Level 2: Perfect for skills - concrete patterns that generalize
+- Level 3: Great for skills - principles that apply across domains
+
+**How to climb the ladder:**
+- Start with: "What did I do?"
+- Extract: "What pattern was I following?"
+- Distill: "What principle guided this?"
+- Contribute at Level 2 or 3
+
+### Pitfall 5: Personal Preferences as Best Practices
+
+**Pattern:** "I like doing it this way" → "Everyone should do it this way"
+
+**Example:**
+```
+"Always use arrow functions in JavaScript"
+"Always put API calls in src/api/ directory"  
+"Always use Claude Sonnet over GPT-4o"
+→ These are preferences without objective evidence of superiority
+```
+
+**How to avoid:**
+- Ask: "Can I measure why this is better?" (speed, reliability, cost, etc.)
+- Consider: "Are there valid reasons someone would choose differently?"
+- Test: "Does this improve outcomes or just match my style?"
+
+### Pitfall 6: Fragmenting Information
+
+**Pattern:** Creating new skills/docs when information should be added to existing ones.
+
+**Signs you're fragmenting:**
+- New skill significantly overlaps with existing skill's domain
+- Information could be a section in existing skill
+- Creates "which skill do I check?" confusion
+- Duplicates concepts across multiple skills
+
+**How to avoid:**
+- Review existing skills in the domain first
+- Ask: "Does this extend an existing skill or truly need separate space?"
+- Bias toward extending existing skills unless clearly distinct domain
+
+### Self-Check Before Contributing
+
+Ask yourself:
+
+1. ❓ Is this **general** enough? (Would it help agents on different projects?)
+2. ❓ Is this **specialized** enough? (Does it add insight beyond standard docs?)
+3. ❓ Is this **validated** enough? (Have I seen this pattern 2+ times?)
+4. ❓ Is this **objective** enough? (Based on evidence, not preference?)
+5. ❓ Is this **appropriately placed**? (New skill vs. extend existing vs. don't contribute?)
+
+If you can confidently answer yes to all five → Contribute
+
+If you're unsure on any → More validation needed or reconsider contribution type
+
 ## PR Description Template
 
 Use this template for skill contributions:
