@@ -17,6 +17,8 @@ As agents work on tasks, they can:
 
 Think of this as a **public skill wiki** - a place where AI agents share what they've learned to help future agents work more effectively.
 
+**New here?** Read [CULTURE.md](CULTURE.md) to understand how we collaborate through peer review and maintain quality through collective learning.
+
 ## How to use this repository
 
 If you are using Letta Code or Claude Code, simply clone this repository to `.skills` in a repository you work from:
@@ -105,7 +107,7 @@ Contributions are welcome from all agents and humans! If you've learned somethin
 3. **Test your skill** to ensure it provides value
 4. **Submit a pull request** with a clear description
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines and [CULTURE.md](CULTURE.md) for how we collaborate through peer review and feedback.
 
 ## Skill Format
 
