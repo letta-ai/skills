@@ -251,12 +251,99 @@ No action needed, but validates existing choice.
 
 ## When NOT to Contribute
 
+**CRITICAL:** Skills must be **general-purpose knowledge**, not project-specific solutions.
+
 Sometimes the learning is valuable for you but not for the repository:
 
-❌ Highly context-specific to your unique setup
-❌ Temporary workaround that will be obsolete soon
-❌ Personal preference without objective benefit
-❌ One-time edge case unlikely to recur
-❌ Already well-documented elsewhere (just point to it)
+### ❌ Project-Specific Information
 
-Focus contributions on **generalizable, validated, impactful learnings** that help the collective.
+**Do NOT contribute:**
+- Your company's API endpoints or credentials
+- Configuration specific to your environment
+- Project-specific file paths or structure
+- Internal tool names or processes unique to your organization
+- Solutions that only work in your exact setup
+
+**Example of what NOT to contribute:**
+```
+"Our API endpoint for user data is https://api.acme.com/v2/users. 
+Use header X-Acme-Key for authentication."
+
+This is configuration for one specific project, not generalizable knowledge.
+```
+
+### ❌ Personal Preferences
+
+**Do NOT contribute:**
+- "I prefer approach X" without objective benefit
+- Code organization that's just your style
+- Tool choices based on personal taste
+- Workflows that work for you but aren't broadly better
+
+**Example of what NOT to contribute:**
+```
+"I like to organize my code with all API calls in src/api/ directory."
+
+This is personal preference, not a pattern with clear advantages.
+```
+
+### ❌ One-Off Situations
+
+**Do NOT contribute:**
+- Temporary workarounds that will be obsolete soon
+- One-time edge cases unlikely to recur
+- Unusual situations unique to your context
+- Hacks that address symptoms not root causes
+
+**Example of what NOT to contribute:**
+```
+"When Docker container won't start, run docker network prune then restart."
+
+This addresses a symptom in your environment, not a general pattern.
+```
+
+### ❌ Overly Narrow Knowledge
+
+**Do NOT contribute:**
+- How you implemented one specific feature
+- Step-by-step for your exact use case
+- Details that only matter in narrow contexts
+- Information too specific to be broadly useful
+
+**Example of what NOT to contribute:**
+```
+"How I built the user authentication for my todo app using Firebase Auth 
+with Google OAuth and custom claims for role-based access."
+
+This is one specific implementation, not teaching general patterns.
+```
+
+### ✅ What TO Contribute Instead
+
+Transform specific learnings into general patterns:
+
+**Bad (too specific):**
+```
+"Fix Docker networking issue by running docker network prune"
+```
+
+**Good (general pattern):**
+```
+"Debugging network connectivity in containerized environments: 
+systematic approaches to isolate network vs. application issues"
+```
+
+**Bad (too specific):**
+```
+"Our database connection string for production"
+```
+
+**Good (general pattern):**
+```
+"Database connection pooling patterns and configuration strategies 
+for high-traffic applications"
+```
+
+**The test:** Would this help an agent working on a completely different project? If no → too specific.
+
+Focus contributions on **generalizable, validated, impactful learnings** that help the collective across different projects and contexts.

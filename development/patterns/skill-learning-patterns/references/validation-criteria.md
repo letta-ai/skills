@@ -31,26 +31,47 @@ Validated: No, insufficient evidence
 
 ### 2. Is This Generalizable Beyond Your Specific Context?
 
+**CRITICAL:** This is the most important validation criterion. Skills must contain **general-purpose knowledge**, not project-specific solutions.
+
 **What this means:**
 - Works across different projects/contexts
-- Not dependent on your unique setup
-- Others are likely to encounter same situation
+- Not dependent on your unique setup/environment
+- Solves problems many agents will encounter
+- Teaches patterns, principles, or widely-applicable practices
 
-**Example - PASS:**
+**Example - PASS (General pattern):**
 ```
 Pattern: API rate limiting with exponential backoff
 Context tested: OpenRouter, Anthropic API, OpenAI API
 Result: Pattern worked across all three
 Generalizable: Yes, applies to most HTTP APIs
+Why general: HTTP rate limiting is universal problem with standard solution
 ```
 
-**Example - FAIL:**
+**Example - FAIL (Too specific):**
+```
+Pattern: Our company API endpoint for user data is https://api.acme.com/v2/users
+Context: My project at Acme Corp
+Result: Works for my project
+Generalizable: No, this is project-specific configuration
+Why not general: Only applies to one company's API
+```
+
+**Example - FAIL (Environment-specific):**
 ```
 Pattern: Restart Docker container to fix database connection
 Context: My local setup with specific networking config
 Result: Works for me
-Generalizable: No, might be environment-specific issue
+Generalizable: No, this is environment-specific workaround
+Why not general: Root cause likely in specific environment, not universal pattern
 ```
+
+**Red flags for overly-specific contributions:**
+- Contains specific URLs, API keys, or credentials for one project
+- Describes configuration unique to your environment
+- Only tested in one narrow context
+- Solution is "what I did" vs "what pattern works generally"
+- Other agents won't encounter this exact situation
 
 ### 3. Have You Seen This Pattern Multiple Times?
 
@@ -148,6 +169,80 @@ Documented: No, presented as universal solution
 - Strong evidence → Contribute confidently
 - Moderate evidence → Contribute with caveats noted
 - Weak evidence → More testing needed before contributing
+
+## Specific vs General: Examples
+
+Understanding the difference between project-specific solutions and general-purpose knowledge is critical.
+
+### ❌ Too Specific (Do NOT contribute)
+
+**Example 1: Project configuration**
+```
+Skill: "How to connect to our company database"
+Content: "Use postgres://user:pass@db.acme.com:5432/production"
+Why bad: Only applies to one company's infrastructure
+```
+
+**Example 2: One-off workaround**
+```
+Skill: "Fix for my Docker networking issue"
+Content: "Run docker network prune && restart container"
+Why bad: Addresses symptom in specific environment, not root cause or pattern
+```
+
+**Example 3: Personal workflow**
+```
+Skill: "My preferred way to organize code"
+Content: "I like to put all API calls in src/api/ folder"
+Why bad: Personal preference without objective benefit or widespread adoption
+```
+
+**Example 4: Narrow tool usage**
+```
+Skill: "How I used library X for project Y"
+Content: Specific implementation details for one project
+Why bad: Too narrow - describes one implementation vs teaching general patterns
+```
+
+### ✅ Appropriately General (Good contributions)
+
+**Example 1: General pattern**
+```
+Skill: "Database connection pooling patterns"
+Content: When to use pooling, configuration strategies, common pitfalls
+Why good: Applies to any database connection, teaches principles
+```
+
+**Example 2: Universal problem**
+```
+Skill: "Handling API rate limits with exponential backoff"
+Content: Pattern, implementation strategies, when to use
+Why good: Common problem with well-established solution, broadly applicable
+```
+
+**Example 3: Framework-agnostic principle**
+```
+Skill: "Error handling in async operations"
+Content: Strategies for retry, timeout, graceful degradation
+Why good: Teaches concepts that apply across languages/frameworks
+```
+
+**Example 4: Tool pattern**
+```
+Skill: "Testing strategies for web applications"
+Content: When to use unit vs integration vs e2e tests, how to structure tests
+Why good: Principles apply regardless of specific testing framework
+```
+
+### The Test: "Would this help an agent working on a different project?"
+
+**Ask yourself:**
+- Would an agent working on a completely different project find this useful?
+- Does this teach a pattern/principle or just document my specific setup?
+- Am I solving a universal problem or my unique situation?
+- Is this "how to think about X" or "what I did for Y"?
+
+**If the answer is "this only helps agents working on my exact project" → Too specific**
 
 ## Validation Methods
 

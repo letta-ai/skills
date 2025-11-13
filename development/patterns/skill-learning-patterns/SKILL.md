@@ -19,6 +19,8 @@ This repository is a **living knowledge base** that improves through collective 
 
 These discoveries should flow back into the repository so all agents benefit.
 
+**Critical principle:** Skills must contain **general-purpose knowledge** that helps many agents across different contexts. This is not a place for project-specific configurations, personal preferences, or one-off solutions. Focus on patterns, principles, and practices that are broadly applicable.
+
 ## When to Use This Skill
 
 Use this skill when:
@@ -57,8 +59,9 @@ Consult `references/recognizing-learnings.md` for detailed patterns.
 Before proposing changes, validate that your learning is sound:
 
 **Validation checklist:**
+- ✅ **Is this generalizable beyond your specific context?** (Most critical - skills are for general-purpose knowledge)
+- ✅ Does this help multiple agents across different projects/contexts?
 - ✅ Did you test that your approach works better?
-- ✅ Is this generalizable beyond your specific context?
 - ✅ Have you seen this pattern multiple times or with evidence?
 - ✅ Does this address a real gap vs. personal preference?
 - ✅ Are there edge cases or tradeoffs to consider?
@@ -79,11 +82,17 @@ See `references/validation-criteria.md` for detailed guidance.
 - Pattern appears frequently but isn't documented
 - Knowledge would benefit many agents
 
-**Note in conversation** when:
-- Learning is context-specific
-- Not yet validated enough
-- Might be temporary workaround
-- Needs more observation
+**Do NOT contribute** when:
+- Learning is specific to your project/context (e.g., "Our API endpoint is X")
+- Solution only works in your unique environment
+- It's a personal preference without objective benefit
+- It's a one-off workaround for unusual situation
+- Knowledge is too narrow to help other agents
+
+**Note in conversation only** when:
+- Learning might be valuable but needs more validation
+- Pattern needs more observation before documenting
+- Temporary workaround that might become obsolete
 
 ### 4. Contribute via Pull Request
 
