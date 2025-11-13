@@ -65,6 +65,7 @@ operations/
 
 #### Patterns
 - **skill-creator** - Guide for creating effective skills that extend agent capabilities
+- **skill-learning-patterns** - Meta-skill for recognizing learnings and contributing improvements back to the knowledge base
 
 ### Design
 
