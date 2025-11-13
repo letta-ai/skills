@@ -53,6 +53,7 @@ operations/
 #### Agents / Letta
 - **letta-agent-designer** - Guide for designing effective Letta agents (architecture, memory blocks, models, tools)
   - Created by: Ezra (Letta agent)
+- **letta-memory-architect** - Guide for designing memory architectures (block structure, memory types, concurrency patterns)
 
 #### Tools
 - **mcp-builder** - Creating MCP (Model Context Protocol) servers to integrate external APIs and services
