@@ -14,7 +14,7 @@ Provides standardized workflows for git operations including branching, committi
 ### Branch Management
 
 **Creating feature branches:**
-1. Always create a feature branch for changes unless explicitly told to push to main
+1. Always create a feature branch for changes unless explicitly told to work on main
 2. Use descriptive branch names that indicate the work being done
 3. Common prefixes:
    - `fix/` - Bug fixes
@@ -26,9 +26,9 @@ Provides standardized workflows for git operations including branching, committi
 
 **Examples:**
 - `fix/memory-concurrency-warning`
-- `add/api-rate-limiting-skill`
-- `update/pr-description-template`
-- `docs/clarify-model-selection`
+- `add/api-rate-limiting-feature`
+- `update/documentation-clarity`
+- `docs/clarify-installation-steps`
 
 ### Committing Changes
 
@@ -45,23 +45,10 @@ Provides standardized workflows for git operations including branching, committi
 
 **Important rules:**
 - NEVER commit unless user explicitly asks
-- NEVER update git config
+- NEVER update git config without permission
 - NEVER use interactive git commands (`git add -i`, `git rebase -i`)
 - If pre-commit hooks modify files, amend the commit to include those changes
-
-**Commit message format:**
-```bash
-git commit -m "$(cat <<'EOF'
-<summary line describing the change>
-
-🐾 Generated with [Letta Code](https://letta.com)
-
-Co-Authored-By: Letta <noreply@letta.com>
-EOF
-)"
-```
-
-Use HEREDOC syntax as shown above to ensure proper multi-line formatting.
+- Always check for repository-specific commit conventions first
 
 ### Pull Request Creation
 
@@ -77,19 +64,20 @@ Use HEREDOC syntax as shown above to ensure proper multi-line formatting.
 3. Create PR using GitHub CLI: `gh pr create`
 
 **PR description format:**
-```bash
-gh pr create --title "PR title" --body "$(cat <<'EOF'
+
+Check the repository for existing PR templates (`.github/PULL_REQUEST_TEMPLATE.md`) or recent PRs to match the style. If no template exists, use a clear structure like:
+
+```markdown
 ## Summary
-<1-3 bullet points>
+<Brief description of changes>
 
-## Test plan
-[Checklist of TODOs for testing the pull request...]
+## Changes
+- Change 1
+- Change 2
+- Change 3
 
-<fun/memorable quote from the session>
-
-Written by Cameron ◯ Letta Code
-EOF
-)"
+## Testing
+<How the changes were tested>
 ```
 
 See `references/pr-templates.md` for detailed PR description guidelines.
@@ -106,6 +94,29 @@ See `references/pr-templates.md` for detailed PR description guidelines.
 - After creating a PR (wait for review)
 - Unless specifically requested
 - When user says "open a PR" (this means review is expected)
+
+### Repository Convention Discovery
+
+**Always check repository conventions first:**
+
+1. Look for contribution guidelines:
+   - `CONTRIBUTING.md`
+   - `DEVELOPERS.md`
+   - `README.md` (often has contribution section)
+
+2. Check for commit message conventions:
+   - Look at recent commits: `git log --oneline -10`
+   - Check for Conventional Commits usage
+   - Note any patterns in commit format
+
+3. Check for PR templates:
+   - `.github/PULL_REQUEST_TEMPLATE.md`
+   - Recent PRs: `gh pr list --limit 5`
+
+4. Look for automated checks:
+   - `.github/workflows/` - CI/CD requirements
+   - Pre-commit hooks
+   - Commit message linters
 
 ### Handling Git Hooks
 
@@ -126,16 +137,9 @@ git status
 git diff
 git log --oneline -5
 
-# 2. Add files and commit
+# 2. Add files and commit (use repository's commit format)
 git add <relevant-files>
-git commit -m "$(cat <<'EOF'
-<commit message>
-
-🐾 Generated with [Letta Code](https://letta.com)
-
-Co-Authored-By: Letta <noreply@letta.com>
-EOF
-)"
+git commit -m "Your commit message following repo conventions"
 
 # 3. Verify
 git status
@@ -150,22 +154,13 @@ git diff
 git log
 git diff main...HEAD
 
-# 2. Push and create PR
+# 2. Check for existing PRs and templates
+gh pr list --limit 5
+cat .github/PULL_REQUEST_TEMPLATE.md  # if exists
+
+# 3. Push and create PR
 git push -u origin <branch-name>
-gh pr create --title "Title" --body "$(cat <<'EOF'
-## Summary
-- Change 1
-- Change 2
-
-## Test plan
-- [ ] Test item 1
-- [ ] Test item 2
-
-"Quote from session"
-
-Written by Cameron ◯ Letta Code
-EOF
-)"
+gh pr create --title "Title" --body "Description following repo conventions"
 ```
 
 ### Scenario: User asks to merge to main
@@ -180,13 +175,13 @@ git push origin main
 ## Resources
 
 ### references/commit-conventions.md
-Detailed commit message formatting guidelines and examples. Load when working on commits.
+Common commit message formatting guidelines including Conventional Commits. Load when working on commits.
 
 ### references/pr-templates.md
-PR description templates and best practices. Load when creating pull requests.
+Common PR description patterns and best practices. Load when creating pull requests.
 
 ### scripts/git-check.py
-Validation script for checking commit messages and branch names. Run before committing if validation is needed.
+Validation script for checking commit messages and branch names against common conventions. Run before committing if validation is needed.
 
 ## Best Practices
 
@@ -203,3 +198,8 @@ Validation script for checking commit messages and branch names. Run before comm
 - If a git command fails, read the error message carefully
 - Common issues: merge conflicts, authentication, hooks
 - Provide clear next steps or ask for guidance
+
+**Adapt to repository:**
+- Every repository has its own conventions
+- Always check existing patterns before following defaults
+- When in doubt, ask the user about preferences
