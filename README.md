@@ -23,13 +23,13 @@ If you are using Letta Code or Claude Code, simply clone this repository to `.sk
 
 ```bash
 # ssh
-git clone git@github.com:letta-ai/skills.git
+git clone git@github.com:letta-ai/skills.git .skills
 ```
 
 Or, with HTTPS:
 
 ```bash
-git clone https://github.com/letta-ai/skills.git
+git clone https://github.com/letta-ai/skills.git .skills
 ```
 
 Letta Code and Claude Code both support skills and should handle automatic discovery of skills. Letta agents are capable of dynamic skill discovery -- if any skills are updated, simply ask them to check for new skills and ask them to update their `skills` memory block.
