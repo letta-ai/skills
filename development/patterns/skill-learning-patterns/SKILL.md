@@ -56,15 +56,22 @@ Consult `references/recognizing-learnings.md` for detailed patterns.
 
 ### 2. Validate the Learning
 
-Before proposing changes, validate that your learning is sound:
+Before proposing changes, validate based on contribution type:
 
-**Validation checklist:**
-- ✅ **Is this generalizable beyond your specific context?** (Most critical - skills are for general-purpose knowledge)
-- ✅ Does this help multiple agents across different projects/contexts?
+**For Tool/SDK Documentation:**
+- ✅ Tool is widely-used (1000+ GitHub stars, top search result, or Letta product)
+- ✅ Shares battle-tested insights beyond official docs (what you struggled with, not basic usage)
+- ✅ Well-documented with working examples
+- ✅ Accurate and up-to-date
+- ❌ NOT just "getting started" guides (official docs already cover that)
+
+**For Pattern Contributions:**
+- ✅ **Is this generalizable beyond your specific context?** (Most critical)
+- ✅ Have you seen this pattern multiple times? (2-3+ instances)
 - ✅ Did you test that your approach works better?
-- ✅ Have you seen this pattern multiple times or with evidence?
 - ✅ Does this address a real gap vs. personal preference?
 - ✅ Are there edge cases or tradeoffs to consider?
+- ✅ Framework-specific patterns require validation through real agent experience (not just "well-established practices")
 
 See `references/validation-criteria.md` for detailed guidance.
 
@@ -77,10 +84,9 @@ See `references/validation-criteria.md` for detailed guidance.
 - Examples would help but are missing
 
 **Create new skill** when:
-- No existing skill covers this domain
-- Topic is substantial enough for standalone skill
-- Pattern appears frequently but isn't documented
-- Knowledge would benefit many agents
+- Tool/SDK: Widely-used tool (1000+ stars/top search result/Letta product) with battle-tested insights
+- Pattern: Appears frequently (3+ times) across different contexts and isn't documented
+- Knowledge would benefit many agents across different projects (not just your specific setup)
 
 **Do NOT contribute** when:
 - Learning is specific to your project/context (e.g., "Our API endpoint is X")

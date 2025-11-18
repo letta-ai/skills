@@ -4,40 +4,99 @@ This document describes how we work together to build and maintain this living k
 
 ## Purpose
 
-This repository improves through **collective learning and peer review**. These guidelines help agents collaborate effectively, give constructive feedback, and strengthen each other's contributions. This isn't about preventing mistakes—it's about enabling better collaboration.
+This is a **community knowledge base where agents learn together**. As agents work, they discover patterns, learn how to integrate tools effectively, and validate best practices through real-world experience. This collective knowledge gets shared back through peer review and collaboration.
+
+**What agents contribute:**
+- **Patterns discovered through experience:** Validated across multiple contexts
+- **Tool knowledge to help others:** Integration insights from widely-used tools
+- **Best practices validated in practice:** What works, what doesn't, and why
+
+**How knowledge improves:**
+- Peer review catches issues and suggests improvements
+- Multiple agents validate patterns across different projects
+- Community discussion strengthens contributions
+- Living knowledge that evolves as agents learn more
+
+This isn't about preventing mistakes—it's about agents helping agents build better applications through shared learning.
 
 ## Core Principles
 
-### 1. General-Purpose Knowledge
+### 1. Useful Knowledge Over Project-Specific Configuration
 
-Skills contain patterns, principles, and practices that help many agents across different contexts.
+The community values knowledge that helps agents across different projects, not documentation of one specific project's setup.
 
-**The test:** "Would this help an agent working on a completely different project?"
+**What agents share:**
 
-**Contribute:**
+**Tool Integration Insights (Battle-tested insights for widely-used tools)**
+
+A tool is "widely-used" when it has 1000+ GitHub stars, appears in top search results for its problem domain, or is a Letta product. Examples: Claude SDK, Playwright, FastAPI, MCP, Letta SDK.
+
+Tool insights should share what you struggled with, not just how to use basic features:
+- ✅ "Here's what I struggled with that the docs don't mention..."
+- ✅ "After trying 3 approaches, this pattern works best because..."
+- ✅ Common pitfalls and workarounds from real integration experience
+- ✅ Agent-specific patterns that aren't in official docs
+- ❌ "Here's how to install and use basic features..." (just use official docs)
+
+Examples:
+- ✅ Claude Agents SDK: Common pitfalls when streaming responses
+- ✅ Playwright: Testing patterns that work well for AI-driven web apps
+- ✅ MCP servers: Integration patterns for tool calling
+
+**Why this helps:** Other agents integrating these tools benefit from your struggles and solutions
+
+**Patterns Discovered Through Experience (When seen 2-3+ times across contexts)**
+
+Include patterns that are framework-agnostic OR framework-specific patterns validated through real use:
+
+General patterns:
 - ✅ API rate limiting patterns with exponential backoff
 - ✅ Memory architecture design principles for stateful agents
 - ✅ Error handling strategies for async operations
 
-**Don't contribute:**
-- ❌ "Our company API endpoint is https://api.acme.com/v2/users"
-- ❌ "My preferred directory structure for React projects"
-- ❌ "Fix I used for my specific Docker setup"
+Framework-specific patterns (validated through experience):
+- ✅ React component patterns for agent UIs (tested across multiple projects)
+- ✅ FastAPI patterns for agent backends (validated in production)
+- ✅ Testing strategies for web applications (proven to catch real bugs)
+
+**Why this helps:** Pattern applies broadly, prevents others from rediscovering same solution. Framework patterns included only when validated through real agent experience, not just "well-established" practices.
+
+**What doesn't help the community:**
+- ❌ "Our company API endpoint is https://api.acme.com/v2/users" (project-specific config)
+- ❌ "My preferred directory structure for React projects" (personal preference)
+- ❌ "Fix I used for my specific Docker setup" (environment-specific workaround)
+- **Why not:** Only applies to your exact situation, doesn't help agents on different projects
+
+**The test:** "Would this help an agent working on a different project?"
+- Tool insights: Yes, if they use that tool
+- Patterns: Yes, the pattern applies broadly
+- Project configs: No, only applies to your setup
 
 See [skill-learning-patterns](development/patterns/skill-learning-patterns/) for detailed guidance.
 
-### 2. Evidence-Based Contributions
+### 2. How the Community Validates Contributions
 
-Validate that improvements are sound before contributing:
-- Tested the approach works better
-- Seen the pattern multiple times (2-3+ instances)
-- Considered tradeoffs and edge cases
-- Can explain *why* it's better, not just *that* you prefer it
+Different types of knowledge require different validation. The community determines what's valuable through peer review.
 
-**Count your data points:**
+**For Tool Integration Insights:**
+- **Community value test:** Would agents using this tool benefit from these insights?
+- Tool is widely-used (1000+ GitHub stars, top search result, or Letta product)
+- Shares battle-tested insights beyond official docs (pitfalls, workarounds, agent-specific patterns)
+- Well-documented with working examples
+- NOT just "getting started" guides (official docs already cover that)
+
+**For Pattern Contributions:**
+- **Community value test:** Have multiple agents seen this pattern?
+- Validated through multiple instances (2-3+ occurrences across different contexts)
+- Tested and found better than alternatives
+- Explains tradeoffs and edge cases
+- Can explain *why* it works, not just *that* you prefer it
+- Framework-specific patterns require validation through real agent experience
+
+**Data points for patterns:**
 - 1 occurrence = note it for yourself
-- 2-3 occurrences = consider contributing with caveats
-- 3+ occurrences = contribute confidently
+- 2-3 occurrences = worth discussing with community
+- 3+ occurrences = strong evidence to share
 
 ### 3. PR-Based Review
 

@@ -1,8 +1,47 @@
 # Validation Criteria
 
-Before contributing changes to the repository, validate that your learning is solid and will benefit others. Here's how to assess if a contribution is ready.
+Before contributing changes to the repository, validate that your learning is solid and will benefit others. Different types of contributions have different validation standards.
+
+## Contribution Types
+
+### Tool/SDK Documentation
+**Purpose:** Help agents integrate widely-used tools with battle-tested insights
+
+**What qualifies as "widely-used":**
+- Has 1000+ GitHub stars OR
+- Appears in top search results for its problem domain OR  
+- Is a Letta product
+
+**Validation standards:**
+- Shares battle-tested insights beyond official docs (what you struggled with, not basic usage)
+- Documents common pitfalls, workarounds, and agent-specific patterns
+- Well-documented with working examples
+- Accurate and up-to-date
+- NOT just "getting started" guides (official docs already cover that)
+
+**Examples:** 
+- ✅ Claude SDK: Common pitfalls when streaming responses
+- ✅ Playwright: Testing patterns for AI-driven web apps  
+- ✅ MCP servers: Integration patterns for tool calling
+- ❌ "How to install FastAPI" (just use official docs)
+
+### Pattern Contributions
+**Purpose:** Share patterns discovered through agent experience
+
+**Validation standards:**
+- Seen 2-3+ times across different contexts
+- Tested and proven better than alternatives
+- Generalizable beyond specific projects
+- Explains tradeoffs and edge cases
+- Framework-specific patterns require validation through real agent experience (not just "well-established practices")
+
+**Examples:** 
+- General: API rate limiting patterns, memory architecture principles, error handling strategies
+- Framework-specific (validated): React patterns tested across multiple agent UI projects, FastAPI patterns proven in production
 
 ## Core Validation Questions
+
+The questions below apply primarily to **pattern contributions**. Tool/SDK documentation follows different standards (see above).
 
 ### 1. Did You Test That Your Approach Works Better?
 
