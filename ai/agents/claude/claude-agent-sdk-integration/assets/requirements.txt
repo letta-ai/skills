@@ -1,0 +1,3 @@
+# Requirements for Claude Agent SDK Integration Examples
+anthropic>=0.7.0
+agentic-learning-sdk>=0.4.0
