@@ -1,13 +1,6 @@
----
-name: pydantic-ai-integration
-description: Integration patterns for adding persistent memory to PydanticAI agents using the Letta Learning SDK. This skill should be used when building PydanticAI agents that need memory across sessions, implementing conversation persistence with PydanticAI, or working with any PydanticAI-supported provider (Anthropic, OpenAI, Gemini, etc.).
----
-
 # PydanticAI Integration
 
-## Overview
-
-This skill provides patterns for adding persistent memory to PydanticAI agents using the Learning SDK. The integration works with all PydanticAI-supported providers including Anthropic, OpenAI, Gemini, and others.
+This reference documents patterns for adding persistent memory to PydanticAI agents using the Learning SDK. The integration works with all PydanticAI-supported providers including Anthropic, OpenAI, Gemini, and others.
 
 ## When to Use
 
@@ -174,48 +167,6 @@ agent = Agent(
 with learning(agent="tool-demo"):
     # Memory helps agent decide when to use tools
     result = agent.run_sync("Search for latest AI news")
-```
-
-## Technical Details
-
-### How It Works
-
-The Learning SDK intercepts PydanticAI's underlying provider calls:
-
-1. **Anthropic**: Patches `beta.messages.create` (PydanticAI uses beta API)
-2. **OpenAI**: Patches `chat.completions.create`
-3. **Gemini**: Patches `generate_content`
-
-This interception happens automatically when the `learning` context manager is active.
-
-### Memory Flow
-
-```
-┌─────────────────────────────────────┐
-│  PydanticAI Agent                   │
-│  agent.run_sync() / agent.run()     │
-└─────────────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────┐
-│  Provider SDK (Anthropic/OpenAI)    │
-│  beta.messages.create() [patched]   │
-└─────────────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────┐
-│  Learning SDK Interceptor           │
-│  1. Retrieve memory context         │
-│  2. Inject into system prompt       │
-│  3. Capture response                │
-│  4. Save to Letta                   │
-└─────────────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────┐
-│  Letta Memory Service               │
-│  (Persistent Storage)               │
-└─────────────────────────────────────┘
 ```
 
 ## Best Practices

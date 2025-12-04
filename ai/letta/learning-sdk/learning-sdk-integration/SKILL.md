@@ -94,6 +94,20 @@ class MemoryEnhancedGeminiAgent:
             return response.text
 ```
 
+### PydanticAI Integration
+
+```python
+from pydantic_ai import Agent
+from agentic_learning import learning
+
+agent = Agent('anthropic:claude-sonnet-4-20250514')
+
+with learning(agent="pydantic-demo"):
+    result = agent.run_sync("Hello!")
+```
+
+For detailed patterns including structured output, tool usage, and async examples, see `references/pydantic-ai.md`.
+
 ## Advanced Patterns
 
 ### Memory-Only Mode (Capture Without Injection)
