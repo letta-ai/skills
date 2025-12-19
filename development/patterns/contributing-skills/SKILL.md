@@ -1,12 +1,12 @@
 ---
-name: skill-learning-patterns
-description: Meta-skill for recognizing learnings, validating improvements, and contributing back to the collective knowledge base. Use when agents discover better patterns, find gaps in existing skills, or want to improve shared knowledge.
+name: contributing-skills
+description: Recognize learnings, validate improvements, contribute to collective knowledge via PRs. Use for: discovering better patterns, finding skill gaps, proposing improvements, skill contribution questions.
 license: MIT
 ---
 
-# Skill Learning Patterns
+# Contributing Skills
 
-This meta-skill teaches agents to recognize valuable learnings during their work and contribute improvements back to the communal skill repository through pull requests.
+Recognize valuable learnings during work and contribute improvements via pull requests.
 
 ## Core Philosophy
 
@@ -20,16 +20,6 @@ This repository is a **living knowledge base** that improves through collective 
 These discoveries should flow back into the repository so all agents benefit.
 
 **Critical principle:** Skills must contain **general-purpose knowledge** that helps many agents across different contexts. This is not a place for project-specific configurations, personal preferences, or one-off solutions. Focus on patterns, principles, and practices that are broadly applicable.
-
-## When to Use This Skill
-
-Use this skill when:
-- You discover something that took significant time to figure out
-- Existing skill instructions led you astray or were incomplete
-- You find yourself repeatedly solving the same undocumented problem
-- You correct a mistake based on learning what actually works
-- You notice a pattern emerging across multiple tasks
-- You want to improve or clarify existing documentation
 
 ## Learning Recognition Process
 
@@ -52,7 +42,7 @@ Pay attention to signals that indicate learnable moments:
 - "I misunderstood the instruction and it caused problems"
 - "This approach failed in ways not documented"
 
-Consult `references/recognizing-learnings.md` for detailed patterns.
+See `references/recognizing-learnings.md` for additional signal patterns and examples.
 
 ### 2. Validate the Learning
 
@@ -73,7 +63,15 @@ Before proposing changes, validate based on contribution type:
 - ✅ Are there edge cases or tradeoffs to consider?
 - ✅ Framework-specific patterns require validation through real agent experience (not just "well-established practices")
 
-See `references/validation-criteria.md` for detailed guidance.
+**Core validation question:** Is this generalizable beyond your specific context?
+
+| ❌ Too Specific | ✅ Appropriately General |
+|----------------|-------------------------|
+| "Our API endpoint is X" | "API rate limiting patterns" |
+| "Fix Docker by running prune" | "Container networking debugging strategies" |
+| "I like putting APIs in src/api/" | "Error handling in async operations" |
+
+See `references/validation-criteria.md` for validation methods and extended examples.
 
 ### 3. Determine Contribution Type
 
@@ -95,6 +93,17 @@ See `references/validation-criteria.md` for detailed guidance.
 - It's a one-off workaround for unusual situation
 - Knowledge is too narrow to help other agents
 
+**Examples of what NOT to contribute:**
+
+| ❌ Category | ❌ Example | Why It's Wrong |
+|------------|-----------|----------------|
+| Project-specific | "Our API endpoint is https://api.acme.com/v2/users" | Only applies to one company |
+| Environment-specific | "Run docker network prune to fix networking" | Addresses symptom in your setup, not root cause |
+| Personal preference | "I like organizing APIs in src/api/ folder" | No objective benefit over alternatives |
+| Overly narrow | "How I implemented auth for my todo app" | Describes one implementation, not teaching patterns |
+
+**The test:** Would this help an agent working on a completely different project? If no → don't contribute.
+
 **Note in conversation only** when:
 - Learning might be valuable but needs more validation
 - Pattern needs more observation before documenting
@@ -112,7 +121,7 @@ See `references/validation-criteria.md` for detailed guidance.
 5. Submit PR for review
 6. Respond to feedback and iterate
 
-Consult `references/pr-workflow.md` for detailed process.
+See `references/pr-workflow.md` for branch naming, commit messages, and PR templates.
 
 ## Contribution Quality Standards
 

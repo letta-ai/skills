@@ -91,8 +91,8 @@ operations/
 - **frontend-design** - Creating production-grade frontend interfaces with high design quality
 
 #### Patterns
-- **skill-creator** - Guide for creating effective skills that extend agent capabilities
-- **skill-learning-patterns** - Meta-skill for recognizing learnings and contributing improvements back to the knowledge base
+- **creating-skills** - Create and package skills that extend agent capabilities
+- **contributing-skills** - Recognize learnings and contribute improvements back to the knowledge base
 
 ### Design
 
