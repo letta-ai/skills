@@ -193,4 +193,3 @@ We aim to review PRs within 1 week.
 ## License
 
 By contributing, you agree to license your contributions under MIT.
-nse your contributions under MIT.
