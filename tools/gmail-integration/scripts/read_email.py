@@ -110,6 +110,7 @@ def read_email(
     result = {
         "id": msg["id"],
         "thread_id": msg["threadId"],
+        "message_id": headers.get("Message-ID", ""),  # For threaded replies
         "from": headers.get("From", ""),
         "to": headers.get("To", ""),
         "cc": headers.get("Cc", ""),
@@ -171,6 +172,8 @@ Examples:
             print(f"Cc: {email['cc']}")
         print(f"Subject: {email['subject']}")
         print(f"Date: {email['date']}")
+        if email.get('message_id'):
+            print(f"Message-ID: {email['message_id']}")
         
         if args.format == "full":
             print(f"Labels: {', '.join(email.get('labels', []))}")

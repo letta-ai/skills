@@ -31,7 +31,7 @@ def get_credentials_path(custom_path: Optional[str] = None) -> Path:
     if env_path:
         return Path(env_path)
     
-    # Default to script directory
+    # Default to skill root directory (parent of scripts directory)
     return Path(__file__).parent.parent / "credentials.json"
 
 
@@ -79,9 +79,10 @@ def authenticate(
             flow = InstalledAppFlow.from_client_secrets_file(str(creds_path), scopes)
             creds = flow.run_local_server(port=0)
         
-        # Save token for future use
+        # Save token for future use with restricted permissions
         with open(token_path, "w") as f:
             f.write(creds.to_json())
+        os.chmod(token_path, 0o600)  # Restrict to owner-only access
         print(f"Token saved to {token_path}")
     
     return creds
