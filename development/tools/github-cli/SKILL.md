@@ -23,7 +23,7 @@ gh pr checks --watch
 gh pr checks --required
 
 # JSON output for scripting
-gh pr checks --json name,state,bucket
+gh pr checks --json name,state,conclusion
 ```
 
 Exit codes: `0` = passed, `1` = failed, `8` = pending
