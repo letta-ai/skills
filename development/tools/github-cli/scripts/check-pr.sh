@@ -14,7 +14,9 @@ for arg in "$@"; do
             WATCH="--watch"
             ;;
         [0-9]*)
-            PR="$arg"
+            if [ -z "$PR" ]; then
+                PR="$arg"
+            fi
             ;;
     esac
 done
