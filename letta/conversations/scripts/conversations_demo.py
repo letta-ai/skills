@@ -20,7 +20,6 @@ Usage:
 
 import os
 import time
-from typing import Generator
 
 from letta_client import Letta
 
@@ -91,11 +90,9 @@ def demo_basic_conversation(client: Letta, agent_id: str) -> str:
     )
     
     # Collect and display streamed messages
-    assistant_response = ""
     for msg in stream:
         if hasattr(msg, "message_type"):
             if msg.message_type == "assistant_message":
-                assistant_response = msg.content
                 print(f"    Assistant: {msg.content}")
             elif msg.message_type == "reasoning_message":
                 print(f"    [Reasoning]: {msg.content[:100]}..." if len(msg.content) > 100 else f"    [Reasoning]: {msg.content}")

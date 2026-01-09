@@ -190,13 +190,13 @@ This skill includes two example scripts in the `scripts/` directory:
 
 ```bash
 # Run the demo script
-LETTA_API_KEY=your-key uv run .skills/letta-conversations/scripts/conversations_demo.py
+LETTA_API_KEY=your-key uv run letta/conversations/scripts/conversations_demo.py
 
 # Run the interactive CLI
-LETTA_API_KEY=your-key uv run .skills/letta-conversations/scripts/conversations_cli.py
+LETTA_API_KEY=your-key uv run letta/conversations/scripts/conversations_cli.py
 
 # CLI with specific agent
-LETTA_API_KEY=your-key uv run .skills/letta-conversations/scripts/conversations_cli.py --agent agent-xxx
+LETTA_API_KEY=your-key uv run letta/conversations/scripts/conversations_cli.py --agent agent-xxx
 ```
 
 ## SDK Gotchas

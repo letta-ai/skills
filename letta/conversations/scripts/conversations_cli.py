@@ -206,6 +206,7 @@ def cmd_history(state: AppState, args: list[str]):
         try:
             limit = int(args[0])
         except ValueError:
+            # Invalid limit provided; keep default of 10 messages
             pass
     
     messages = state.client.conversations.messages.list(
@@ -329,13 +330,11 @@ def send_message(state: AppState, message: str):
         # Stream and display the response
         print(colored("  Bot: ", Colors.GREEN + Colors.BOLD), end="", flush=True)
         
-        full_response = ""
         for msg in stream:
             if hasattr(msg, "message_type"):
                 if msg.message_type == "assistant_message":
                     # Print content as it streams
                     print(msg.content, end="", flush=True)
-                    full_response = msg.content
                 elif msg.message_type == "reasoning_message":
                     # Show reasoning in dim color
                     reasoning = msg.content[:100] + "..." if len(msg.content) > 100 else msg.content
