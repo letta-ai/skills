@@ -40,11 +40,11 @@ Note: Review extraction uses browser-use to search DuckDuckGo (since Yelp blocks
 
 ## Scripts
 
-All scripts are in `.skills/yelp-search/scripts/` and should be run with `uv run python`.
+All scripts are in `tools/yelp-search/scripts/` and should be run with `uv run python`.
 
 ### search.py - Find Businesses (Primary Tool)
 ```bash
-uv run python .skills/yelp-search/scripts/search.py "search term" --location "City, State"
+uv run python tools/yelp-search/scripts/search.py "search term" --location "City, State"
 ```
 
 **Options:**
@@ -60,33 +60,46 @@ uv run python .skills/yelp-search/scripts/search.py "search term" --location "Ci
 **Examples:**
 ```bash
 # Find top-rated dog groomers
-uv run python .skills/yelp-search/scripts/search.py "dog groomer" -l "San Francisco" --sort-by rating
+uv run python tools/yelp-search/scripts/search.py "dog groomer" -l "San Francisco" --sort-by rating
 
 # Find cheap restaurants nearby
-uv run python .skills/yelp-search/scripts/search.py "restaurants" -l "94123" --price 1,2 --sort-by distance
+uv run python tools/yelp-search/scripts/search.py "restaurants" -l "94123" --price 1,2 --sort-by distance
 
 # Search near a specific address
-uv run python .skills/yelp-search/scripts/search.py "laundry pickup" -l "123 Main St, San Francisco"
+uv run python tools/yelp-search/scripts/search.py "laundry pickup" -l "123 Main St, San Francisco"
 ```
 
 ### details.py - Get Business Hours & Info
 ```bash
-uv run python .skills/yelp-search/scripts/details.py "business-alias"
+uv run python tools/yelp-search/scripts/details.py "business-alias"
 ```
 
 The business alias is in the Yelp URL (e.g., `the-laundry-corner-san-francisco`).
 
 ### phone_search.py - Reverse Lookup
 ```bash
-uv run python .skills/yelp-search/scripts/phone_search.py "+14155551234"
+uv run python tools/yelp-search/scripts/phone_search.py "+14155551234"
 ```
 
 ### get_reviews.py - Extract Review Text (Slow)
 ```bash
-uv run python .skills/yelp-search/scripts/get_reviews.py "Business Name" -l "City" -n 3
+uv run python tools/yelp-search/scripts/get_reviews.py "Business Name" -l "City" -n 3
 ```
 
 **Note:** Uses browser-use which is slow (~30-60s). Yelp blocks direct scraping, so it searches DuckDuckGo for cached reviews as a workaround.
+
+### scrape_reviews.py - Direct Yelp Scraping (Alternative)
+```bash
+uv run python tools/yelp-search/scripts/scrape_reviews.py "https://www.yelp.com/biz/business-alias" -n 5
+```
+
+**Requires Browserbase credentials:**
+```
+BROWSERBASE_API_KEY=your_key_here
+BROWSERBASE_PROJECT_ID=your_project_id
+```
+
+**Note:** Uses Browserbase with proxies to bypass Yelp's CAPTCHA. More reliable than `get_reviews.py` but requires a Browserbase account.
 
 ## Best Practices
 
