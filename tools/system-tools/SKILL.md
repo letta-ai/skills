@@ -11,6 +11,8 @@ Provides four essential system interaction tools that extend Letta's built-in ca
 - **read_file_contents** - Read files without character limits (Letta's built-in has 500 char limit)
 - **write_file_contents** - Overwrite files (Letta's built-in only appends)
 - **list_directory_contents** - List directory contents (not available in Letta built-ins)
+- **smart_read_file** - LLM-powered extraction of relevant snippets (prevents context blowup)
+- **smart_grep_file** - Regex search with context (no LLM required)
 
 ## When to Use
 
@@ -157,6 +159,70 @@ Directories (3):
 Files (2):
   index.ts (245 bytes)
   App.tsx (1,847 bytes)
+```
+
+### smart_read_file
+
+Read a file and return only snippets relevant to your query. Uses LLM-powered extraction to prevent context window blowup.
+
+```python
+smart_read_file(file_path: str, query: str, max_chars: int = 500) -> str
+```
+
+**Parameters:**
+- `file_path` - Path to the file
+- `query` - What you're looking for (e.g., "authentication logic", "error handling")
+- `max_chars` - Maximum characters to return (default: 500)
+
+**Returns:** Relevant snippets with line numbers
+
+**Example:**
+```
+Agent: smart_read_file("src/auth.py", "password validation")
+Result: File: src/auth.py (5847 chars)
+Query: password validation
+
+Lines 45-52:
+def validate_password(password: str) -> bool:
+    if len(password) < 8:
+        return False
+    if not re.search(r'[A-Z]', password):
+        return False
+    return True
+```
+
+**Note:** Requires `ANTHROPIC_API_KEY` environment variable. Falls back to truncation if unavailable.
+
+### smart_grep_file
+
+Search a file for a pattern and return matching lines with context. No LLM required.
+
+```python
+smart_grep_file(file_path: str, pattern: str, context_lines: int = 2, max_matches: int = 5) -> str
+```
+
+**Parameters:**
+- `file_path` - Path to the file
+- `pattern` - Regex pattern to search for
+- `context_lines` - Lines of context before/after each match (default: 2)
+- `max_matches` - Maximum matches to return (default: 5)
+
+**Returns:** Matching snippets with line numbers and context
+
+**Example:**
+```
+Agent: smart_grep_file("src/api.py", "def.*endpoint", context_lines=1)
+Result: File: src/api.py
+Pattern: def.*endpoint
+Matches: 3/7
+
+    44: @app.route("/users")
+>>> 45: def users_endpoint():
+    46:     return get_users()
+---
+    78: @app.route("/posts")
+>>> 79: def posts_endpoint():
+    80:     return get_posts()
 ```
 
 ## Security Considerations
