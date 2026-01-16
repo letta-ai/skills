@@ -2,7 +2,3 @@
 .skills/
 .letta/
 .env
-
-# Python
-__pycache__/
-*.pyc
