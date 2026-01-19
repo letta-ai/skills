@@ -1,12 +1,12 @@
 ---
 name: letta-app-development
-description: Build applications with Letta's stateful agent platform. Covers SDK patterns for Python and TypeScript, memory management, custom tools, multi-user scenarios, and streaming. Includes 24 working code examples.
+description: Build applications with the Letta API. Covers SDK patterns for Python and TypeScript, memory management, custom tools, multi-user scenarios, and streaming. Includes 24 working code examples.
 license: MIT
 ---
 
 # Letta App Development Skill
 
-Build applications on top of Letta's stateful agent platform. This skill covers the core patterns for creating agents, managing memory, building custom tools, and handling multi-user scenarios.
+Build applications on top of the **Letta API** — the stateful agent platform that powers [Letta Code](https://github.com/letta-ai/letta-code) and the [Learning SDK](https://github.com/letta-ai/learning-sdk). This skill covers the core patterns for creating agents, managing memory, building custom tools, and handling multi-user scenarios.
 
 ## When to Use This Skill
 
@@ -14,6 +14,7 @@ Build applications on top of Letta's stateful agent platform. This skill covers 
 - Creating chatbots, assistants, or autonomous agents with memory
 - Integrating Letta into existing web/mobile applications
 - Building multi-user applications where each user has their own agent
+- Understanding the API layer that Letta Code and Learning SDK are built on
 
 ## Quick Start
 
