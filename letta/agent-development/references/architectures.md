@@ -1,12 +1,12 @@
 # Letta Agent Architectures
 
-## letta_v1_agent (Recommended - October 2025)
+## letta_v1_agent (Recommended)
 
 **Key Features:**
 - Native reasoning via Responses API (encrypted across providers)
 - Direct assistant message generation (no send_message tool)
 - Works with ANY LLM (tool calling no longer required)
-- Optimized for frontier models (GPT-5, Claude 4.5 Sonnet)
+- Optimized for frontier models (GPT-4o, Claude Sonnet 4, Gemini 2.0)
 
 **Trade-offs:**
 - No prompted reasoning for smaller models

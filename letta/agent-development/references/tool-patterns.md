@@ -66,7 +66,7 @@ tools = [
 ]
 ```
 
-**Note:** A2A messaging has known issues in v1 (November 2025). Community workaround available.
+**Note:** Use `send_message_to_agent_and_wait_for_reply` for agent-to-agent communication. Check docs for latest multi-agent patterns.
 
 ## Tool Rules
 
@@ -93,15 +93,33 @@ tool_rules = [
 
 - ALL imports must be INSIDE function body
 - Tools execute in sandbox without top-level imports
-- Use `from letta_client.client import BaseTool` (not `from letta`)
+- Return strings or JSON-serializable objects
 
-**Example:**
+**Example - Creating and attaching a custom tool:**
 
-```
-def my_custom_tool(param: str) -> str:
-  """Tool description"""
-  import requests # Import INSIDE function
+```python
+from letta_client import Letta
 
-  # Tool logic here
-  return result
+client = Letta()
+
+# Define tool with imports INSIDE the function
+tool_source = '''
+def fetch_weather(city: str) -> str:
+    """Fetch current weather for a city.
+    
+    Args:
+        city: Name of the city
+        
+    Returns:
+        Weather description string
+    """
+    import requests  # Import INSIDE function
+    
+    response = requests.get(f"https://wttr.in/{city}?format=3")
+    return response.text
+'''
+
+# Create and attach to agent
+tool = client.tools.create(source_code=tool_source)
+client.agents.tools.attach(agent_id=agent.id, tool_id=tool.id)
 ```

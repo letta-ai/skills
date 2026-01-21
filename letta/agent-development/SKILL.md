@@ -22,11 +22,35 @@ Use this skill when:
 
 ## Quick Start Guide
 
+### Minimal Working Example
+
+```python
+from letta_client import Letta
+
+client = Letta()
+agent = client.agents.create(
+    name="my-assistant",
+    model="openai/gpt-4o",
+    embedding="openai/text-embedding-3-small",
+    memory_blocks=[
+        {"label": "persona", "value": "You are a helpful assistant."},
+        {"label": "human", "value": "The user's name and preferences."},
+    ],
+)
+
+# Send a message
+response = client.agents.messages.create(
+    agent_id=agent.id,
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+print(response.messages[-1].content)
+```
+
 ### 1. Architecture Selection
 
 **Use letta_v1_agent when:**
-- Building new agents (recommended default as of October 2025)
-- Need compatibility with reasoning models (GPT-5, Claude 4.5 Sonnet)
+- Building new agents (recommended default)
+- Need compatibility with reasoning models (GPT-4o, Claude Sonnet 4)
 - Want simpler system prompts and direct message generation
 
 **Use memgpt_v2_agent when:**
@@ -83,13 +107,14 @@ See `references/memory-patterns.md` for domain examples and `references/descript
 Match model capabilities to agent requirements:
 
 **For production agents:**
-- GPT-4o or Claude 4.5 Sonnet for complex reasoning
+- GPT-4o or Claude Sonnet 4 for complex reasoning
 - GPT-4o-mini for cost-efficient general tasks
-- Claude Haiku 4.5 for fast, lightweight operations
+- Claude Haiku 3.5 for fast, lightweight operations
+- Gemini 2.0 Flash for balanced speed/capability
 
 **Avoid for production:**
 - Small Ollama models (<7B parameters) - poor tool calling
-- Gemini older than 2.5 Pro - function calling reliability issues
+- Models without reliable function calling support
 
 See `references/model-recommendations.md` for detailed guidance.
 
@@ -180,26 +205,66 @@ Letting blocks grow indefinitely until they hit limits. Monitor and manage proac
 
 ## Implementation Steps
 
-1. **Design phase:**
-   - Choose architecture based on requirements
-   - Design memory block structure
-   - Select appropriate model
-   - Plan tool configuration
+### 1. Design Phase
+- Choose architecture based on requirements
+- Design memory block structure
+- Select appropriate model
+- Plan tool configuration
 
-2. **Creation phase:**
-   - Create agent via ADE or API
-   - Initialize memory blocks with proper descriptions
-   - Attach necessary tools
+### 2. Creation Phase (SDK)
 
-3. **Testing phase:**
-   - Test with representative queries
-   - Monitor memory tool usage patterns
-   - Verify tool calling behavior
+**Python:**
+```python
+from letta_client import Letta
 
-4. **Iteration phase:**
-   - Refine memory block structure based on actual usage
-   - Optimize system instructions
-   - Adjust tool configurations
+client = Letta()  # Uses LETTA_API_KEY env var
+
+# Create agent with custom memory blocks
+agent = client.agents.create(
+    name="my-agent",
+    model="openai/gpt-4o",  # or "anthropic/claude-sonnet-4-20250514"
+    embedding="openai/text-embedding-3-small",
+    memory_blocks=[
+        {"label": "persona", "value": "You are a helpful assistant..."},
+        {"label": "human", "value": "User preferences and context..."},
+        {"label": "project", "value": "Current project details..."},
+    ],
+    description="Agent for helping with X",
+)
+print(f"Created agent: {agent.id}")
+```
+
+**TypeScript:**
+```typescript
+import Letta from "letta-client";
+
+const client = new Letta();
+
+const agent = await client.agents.create({
+  name: "my-agent",
+  model: "openai/gpt-4o",
+  embedding: "openai/text-embedding-3-small",
+  memoryBlocks: [
+    { label: "persona", value: "You are a helpful assistant..." },
+    { label: "human", value: "User preferences and context..." },
+    { label: "project", value: "Current project details..." },
+  ],
+  description: "Agent for helping with X",
+});
+console.log(`Created agent: ${agent.id}`);
+```
+
+**Note:** Letta Code CLI (`letta` command) creates agents interactively. Use `letta --new-agent` to start fresh, then `/rename` and `/description` to configure.
+
+### 3. Testing Phase
+- Test with representative queries
+- Monitor memory tool usage patterns
+- Verify tool calling behavior
+
+### 4. Iteration Phase
+- Refine memory block structure based on actual usage
+- Optimize system instructions
+- Adjust tool configurations
 
 ## References
 

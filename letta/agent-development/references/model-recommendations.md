@@ -3,29 +3,29 @@
 ## Production Recommendations
 
 ### High-Quality Reasoning
-- **GPT-4o**: Best overall, reliable tool calling
-- **Claude 4.5 Sonnet**: Excellent reasoning, strong with memory tools
-- **Gemini 2.5 Pro**: Good performance, intermittent function calling issues
+- **GPT-4o**: Best overall, reliable tool calling (`openai/gpt-4o`)
+- **Claude Sonnet 4**: Excellent reasoning, strong with memory tools (`anthropic/claude-sonnet-4-20250514`)
+- **Gemini 2.0 Flash**: Fast, good capability (`google/gemini-2.0-flash`)
 
 ### Cost-Efficient
-- **GPT-4o-mini**: Best balance of cost and capability
-- **Claude Haiku 4.5**: Fast, lightweight, good for simple tasks
+- **GPT-4o-mini**: Best balance of cost and capability (`openai/gpt-4o-mini`)
+- **Claude Haiku 3.5**: Fast, lightweight, good for simple tasks (`anthropic/claude-3-5-haiku-20241022`)
 
 ### Local/Self-Hosted
-- **qwen3**: Strong local model
-- **Mistral Small**: Good tool calling
-- **gpt-oss**: Recommended by team for local deployment
+- **Qwen 2.5**: Strong local model with good tool calling
+- **Llama 3.3 70B**: Excellent local option
+- **Mistral Small**: Good tool calling for its size
 
 ## Avoid for Production
 
 ### Tool Calling Issues
 - Ollama models < 7B parameters
-- Gemini models older than 2.5 Pro
-- Command R (team assessment: "bad model")
+- Models without function calling support
+- Untested vision models in tool-calling contexts
 
 ### Proxy Provider Issues
-- OpenRouter: "playing Russian roulette" with tool calling
-- Groq: Generally poor tool calling support
+- OpenRouter: Inconsistent tool calling across providers
+- Groq: Limited tool calling support
 
 ## Context Window Considerations
 
@@ -43,12 +43,13 @@
 ## Reasoning Models
 
 **Native reasoning (v1 agents only):**
-- GPT-5
-- Claude 4.5 Sonnet with Responses API
+- GPT-4o and newer
+- Claude Sonnet 4 with extended thinking
+- Gemini 2.0 Flash Thinking
 
 **Prompted reasoning (v2 agents):**
 - Better for smaller models
-- Uses tool call arguments for "fake" reasoning
+- Uses tool call arguments for inner monologue
 
 ## Cost Management
 
