@@ -44,46 +44,60 @@ Letta Code and Claude Code both support skills and should handle automatic disco
 
 ## Repository Structure
 
-Skills are organized by domain and topic using a hierarchical directory structure:
+Skills are organized into practical, flat categories:
 
 ```
-ai/
-├── agents/
-│   ├── letta/           # Letta-specific agent patterns
-│   ├── claude/          # Claude-specific patterns
-│   └── general/         # General agent design patterns
-├── models/              # LLM usage patterns and guides
-└── tools/               # AI tool integrations
+letta/                   # Letta product ecosystem
+├── agent-development/   # Agent design and architecture
+├── app-development/     # Building applications with Letta
+├── benchmarks/          # Testing and benchmarking agents
+├── conversations/       # Conversation management
+├── fleet-management/    # Managing multiple agents
+├── learning-sdk/        # Learning SDK integration
+└── model-configuration/ # Model setup and configuration
 
-development/
-├── languages/           # Programming languages (python/, javascript/, etc.)
-├── frameworks/          # Framework-specific knowledge
-└── patterns/            # Design patterns and best practices
+tools/                   # General tool integrations
+├── extracting-pdf-text/ # PDF text extraction
+├── gmail-integration/   # Gmail API integration
+├── google-calendar/     # Google Calendar integration
+├── imessage/            # iMessage integration
+├── mcp-builder/         # MCP server creation
+├── webapp-testing/      # Web app testing with Playwright
+└── yelp-search/         # Yelp search integration
 
-design/
-├── visual/              # Graphic design, UI/UX
-├── architecture/        # System architecture
-└── documentation/       # Documentation writing
+meta/                    # Skills about the skill system
+├── skill-creator/       # Guide for creating skills
+└── skill-learning/      # Recognizing and contributing learnings
 
-operations/
-├── deployment/          # Deployment strategies
-├── monitoring/          # System monitoring
-└── security/            # Security practices
+templates/               # Reusable templates and patterns
+├── frontend-design/     # Frontend interface design
+├── internal-comms/      # Internal communications
+└── nextjs-saas/         # Next.js SaaS template
 ```
 
-**Principle:** Organize by domain first, then by specificity. Create new categories as needed.
+**Principle:** Start simple, evolve based on actual needs rather than predicted scale.
 
 ## Current Skills
 
 ### Letta
 
 - **agent-development** - Comprehensive guide for designing and building Letta agents (architecture selection, memory design, model selection, tool configuration)
+- **app-development** - Building applications powered by Letta agents
+- **benchmarks** - Testing and benchmarking Letta agents
+- **conversations** - Managing agent conversations and message history
+- **fleet-management** - Managing and orchestrating multiple Letta agents
 - **learning-sdk** - Integration patterns for adding persistent memory to LLM agents using the Letta Learning SDK
+- **model-configuration** - Configuring models and providers for Letta agents
 
 ### Tools
 
+- **extracting-pdf-text** - Extracting text content from PDF documents
+- **gmail-integration** - Integrating with Gmail API for email operations
+- **google-calendar** - Working with Google Calendar API
+- **imessage** - Integrating with iMessage
 - **mcp-builder** - Creating MCP (Model Context Protocol) servers to integrate external APIs and services
 - **webapp-testing** - Testing web applications using Playwright for UI verification and debugging
+- **yelp-search** - Searching and retrieving business information from Yelp
 
 ### Meta
 
@@ -94,6 +108,7 @@ operations/
 
 - **frontend-design** - Creating production-grade frontend interfaces with high design quality
 - **internal-comms** - Writing internal communications (status reports, updates, FAQs, etc.)
+- **nextjs-saas** - Template for building SaaS applications with Next.js
 
 ## Contributing
 
