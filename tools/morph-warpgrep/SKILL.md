@@ -42,16 +42,40 @@ rg --version
 
 ## Quick Test
 
-After setup, test WarpGrep on any local repository:
+After setup, run the included test script on any local repository:
 
 ```bash
-# One-liner test (replace /path/to/your/repo with a real codebase)
-bun -e 'import{MorphClient}from"@morphllm/morphsdk";const m=new MorphClient({apiKey:process.env.MORPH_API_KEY});const r=await m.warpGrep.execute({query:"Find the main entry point",repoRoot:"/path/to/your/repo"});console.log("Success:",r.success,"Files:",r.contexts?.map(c=>c.file))'
+# Clone a test repo (or use any existing codebase)
+git clone https://github.com/letta-ai/letta-code.git test-repo
+
+# Install SDK
+cd test-repo
+bun add @morphllm/morphsdk
+
+# Run test script
+export MORPH_API_KEY="your-key"
+bun ../scripts/test-warpgrep.ts .
 ```
 
 Expected output:
 ```
-Success: true Files: [ "src/index.ts", ... ]
+======================================================================
+MORPH WARPGREP TEST
+======================================================================
+Repo: .
+SDK: @morphllm/morphsdk
+======================================================================
+
+| Query                              | Result | Time   | Files |
+|------------------------------------|--------|--------|-------|
+| Find the main entry point          | ✅     | 5.2s   | 2     |
+| Find authentication logic          | ✅     | 4.1s   | 4     |
+| Find where configuration is handled | ✅     | 3.8s   | 3     |
+| Find error handling patterns       | ✅     | 4.5s   | 5     |
+
+======================================================================
+Results: 4 passed, 0 failed
+======================================================================
 ```
 
 ---
