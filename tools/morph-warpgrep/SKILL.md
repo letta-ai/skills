@@ -193,15 +193,19 @@ const mergedCode = data.choices[0].message.content;
 
 Tested on the [letta-code](https://github.com/letta-ai/letta-code) repository (~300 TypeScript files) using SDK v0.2.103:
 
-| Query | Result | Time |
-|-------|--------|------|
-| "Find the main entry point" | ✅ Found `src/index.ts` | ~12s |
-| "Find authentication middleware" | ✅ Found auth files | ~8s |
-| "Find where models are configured" | ✅ Found config files | ~6s |
+| Query | Result | Time | Files Found |
+|-------|--------|------|-------------|
+| "Find authentication logic" | ✅ | 4.2s | `src/auth/oauth.ts`, `src/auth/setup.ts`, +2 |
+| "Find the main CLI entry point" | ✅ | 5.8s | `src/index.ts`, `src/cli/App.tsx` |
+| "Find where models are configured" | ✅ | 3.1s | `src/agent/model.ts`, `src/models.json`, +1 |
+| "Find how memory blocks work" | ✅ | 3.9s | `src/agent/memory.ts`, `src/agent/memoryFilesystem.ts`, +1 |
+| "Find the settings manager" | ✅ | 2.9s | `src/settings-manager.ts`, `src/settings.ts` |
+
+**5/5 tests passed**
 
 ### Performance Summary
 
-- **Completion time**: 6-12 seconds
+- **Average time**: 4.0 seconds
 - **Token efficiency**: 39% fewer input tokens vs manual search
 - **Accuracy**: Finds relevant code in 2-4 turns
 
