@@ -212,14 +212,36 @@ const applied = await morph.fastApply.apply({
 
 ### "Search did not complete" Error
 
-If the SDK returns this error, it may be using a deprecated model. Try:
+If the SDK returns this error, the SDK may be using a deprecated model name. Solutions:
 
-1. Update the SDK: `bun add @morphllm/morphsdk@latest`
-2. If still failing, use the direct API (see below)
+1. **Update the SDK**: `bun add @morphllm/morphsdk@latest`
+2. **Check Morph status**: The API and SDK may have version mismatches - check [Morph Discord](https://discord.gg/AdXta4yxEK) for updates
+3. **Use Fast Apply directly**: Fast Apply (`morph-v3-fast`) works reliably while WarpGrep SDK issues are resolved
 
-### Direct API Usage (Fallback)
+### Verify Your API Key Works
 
-If the SDK has issues, call the API directly:
+Test your API key with Fast Apply (more stable):
+
+```typescript
+const response = await fetch('https://api.morphllm.com/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${process.env.MORPH_API_KEY}`
+  },
+  body: JSON.stringify({
+    model: 'morph-v3-fast',
+    messages: [{
+      role: 'user',
+      content: '<instruction>Add logging</instruction>\n<code>function test() {}</code>\n<update>function test() { console.log("called"); }</update>'
+    }],
+    temperature: 0
+  })
+});
+// Should return 200 OK
+```
+
+### Direct API Usage
 
 ```typescript
 // Fast Apply - Direct API
