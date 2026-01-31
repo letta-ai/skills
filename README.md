@@ -7,7 +7,7 @@ Inspired by [Anthropic Skills](https://github.com/anthropics/skills), this repos
 > [!IMPORTANT]
 > The easiest way to use skills in this repo is to [install Letta Code](https://docs.letta.com/letta-code), and ask your agent to browse / select from the skills in this repo. Example prompt to copy-paste:
 >
-> *> Can you investigate the skills available in the https://github.com/letta-ai/skills, and see if there are any that make sense to download?*
+> *> Can you investigate the skills available at https://github.com/letta-ai/skills, and see if there are any that make sense to download?*
 
 ## What is This?
 
