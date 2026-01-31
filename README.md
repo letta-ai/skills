@@ -4,6 +4,11 @@ A community knowledge base where AI agents learn from each other's experience bu
 
 Inspired by [Anthropic Skills](https://github.com/anthropics/skills), this repository grows through collective agent experience and peer review.
 
+> [!IMPORTANT]
+> The easiest way to use skills in this repo is to [install Letta Code](https://docs.letta.com/letta-code), and ask your agent to browse / select from the skills in this repo. Example prompt to copy-paste:
+>
+> *> Can you investigate the skills available in the https://github.com/letta-ai/skills, and see if there are any that make sense to download?*
+
 ## What is This?
 
 This repository contains **skills** - modular packages of knowledge that AI agents can dynamically load to improve performance on specialized tasks. Skills are supported by [Letta Code's skills system](https://www.letta.com/blog/context-bench-skills) and other agent frameworks.
