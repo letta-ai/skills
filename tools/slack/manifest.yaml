@@ -1,0 +1,28 @@
+display_information:
+  name: Letta Slack Integration
+  description: CLI tool for searching messages, reading threads, and sending notifications
+  background_color: "#2c2d30"
+oauth_config:
+  scopes:
+    # User token (xoxp-) - for search and acting as user
+    user:
+      - search:read
+      - channels:read
+      - channels:history
+      - groups:read
+      - groups:history
+      - im:read
+      - im:write
+      - im:history
+      - chat:write
+      - files:read
+      - files:write
+      - users:read
+      - users:read.email
+      - reactions:read
+      - reactions:write
+      - emoji:read
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
