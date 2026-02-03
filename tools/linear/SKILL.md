@@ -7,6 +7,13 @@ description: Manage Linear issues via GraphQL API. List, filter, update, priorit
 
 Interact with Linear's GraphQL API to manage issues.
 
+## When to Use
+
+- User asks about Linear issues, tickets, or project management
+- Need to triage, prioritize, or update issue status
+- Want to search or comment on issues
+- Managing a backlog or sprint
+
 ## Setup
 
 Requires `LINEAR_API_KEY` environment variable. Get one from Linear Settings > API > Personal API keys.

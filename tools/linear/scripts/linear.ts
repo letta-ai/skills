@@ -7,12 +7,27 @@
 const LINEAR_API = "https://api.linear.app/graphql";
 const API_KEY = process.env.LINEAR_API_KEY;
 
+// Type definitions
+interface GraphQLError {
+  message: string;
+}
+
+interface WorkflowState {
+  id: string;
+  name: string;
+}
+
+interface IssueUpdateInput {
+  priority?: number;
+  stateId?: string;
+}
+
 if (!API_KEY) {
   console.error("Error: LINEAR_API_KEY environment variable not set");
   process.exit(1);
 }
 
-async function graphql(query: string, variables: Record<string, any> = {}) {
+async function graphql(query: string, variables: Record<string, unknown> = {}) {
   const res = await fetch(LINEAR_API, {
     method: "POST",
     headers: {
@@ -23,7 +38,7 @@ async function graphql(query: string, variables: Record<string, any> = {}) {
   });
   const data = await res.json();
   if (data.errors) {
-    throw new Error(data.errors.map((e: any) => e.message).join(", "));
+    throw new Error(data.errors.map((e: GraphQLError) => e.message).join(", "));
   }
   return data.data;
 }
@@ -131,7 +146,7 @@ async function updateIssue(id: string, updates: { priority?: number; state?: str
     throw new Error(`Issue not found: ${id}`);
   }
 
-  const input: Record<string, any> = {};
+  const input: IssueUpdateInput = {};
   
   if (updates.priority !== undefined) {
     input.priority = updates.priority;
@@ -151,7 +166,7 @@ async function updateIssue(id: string, updates: { priority?: number; state?: str
     `;
     const statesData = await graphql(statesQuery);
     const state = statesData.workflowStates.nodes.find(
-      (s: any) => s.name.toLowerCase() === updates.state!.toLowerCase()
+      (s: WorkflowState) => s.name.toLowerCase() === updates.state!.toLowerCase()
     );
     if (!state) {
       throw new Error(`State not found: ${updates.state}`);
