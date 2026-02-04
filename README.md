@@ -54,30 +54,25 @@ Skills are organized into practical, flat categories:
 ```
 letta/                   # Letta product ecosystem
 ├── agent-development/   # Agent design and architecture
-├── letta-api-client/    # Building applications with the Letta API using the Python and TypeScript SDKs
+├── letta-api-client/    # Building apps with Letta SDK (Python/TypeScript)
+├── letta-configuration/ # Model and provider configuration
 ├── benchmarks/          # Testing and benchmarking agents
 ├── conversations/       # Conversation management
 ├── fleet-management/    # Managing multiple agents
-├── learning-sdk/        # Learning SDK integration
-└── model-configuration/ # Model setup and configuration
+└── learning-sdk/        # Learning SDK integration
 
 tools/                   # General tool integrations
 ├── extracting-pdf-text/ # PDF text extraction
-├── gmail-integration/   # Gmail API integration
-├── google-calendar/     # Google Calendar integration
+├── google-workspace/    # Gmail and Google Calendar integration
 ├── imessage/            # iMessage integration
+├── linear/              # Linear issue tracking
 ├── mcp-builder/         # MCP server creation
+├── slack/               # Slack integration
 ├── webapp-testing/      # Web app testing with Playwright
 └── yelp-search/         # Yelp search integration
 
 meta/                    # Skills about the skill system
-├── skill-creator/       # Guide for creating skills
-└── skill-learning/      # Recognizing and contributing learnings
-
-templates/               # Reusable templates and patterns
-├── frontend-design/     # Frontend interface design
-├── internal-comms/      # Internal communications
-└── nextjs-saas/         # Next.js SaaS template
+└── skill-development/   # Creating and contributing skills
 ```
 
 **Principle:** Start simple, evolve based on actual needs rather than predicted scale.
@@ -88,32 +83,26 @@ templates/               # Reusable templates and patterns
 
 - **agent-development** - Comprehensive guide for designing and building Letta agents (architecture selection, memory design, model selection, tool configuration)
 - **letta-api-client** - Building applications with the Letta API using the Python and TypeScript SDKs (agents, tools, memory, multi-user patterns)
+- **letta-configuration** - Configure LLM models and providers for Letta agents and servers
 - **benchmarks** - Testing and benchmarking Letta agents
 - **conversations** - Managing agent conversations and message history
 - **fleet-management** - Managing and orchestrating multiple Letta agents
 - **learning-sdk** - Integration patterns for adding persistent memory to LLM agents using the Letta Learning SDK
-- **model-configuration** - Configuring models and providers for Letta agents
 
 ### Tools
 
 - **extracting-pdf-text** - Extracting text content from PDF documents
-- **gmail-integration** - Integrating with Gmail API for email operations
-- **google-calendar** - Working with Google Calendar API
-- **imessage** - Integrating with iMessage
+- **google-workspace** - Gmail and Google Calendar integration via OAuth 2.0
+- **imessage** - Integrating with iMessage on macOS
+- **linear** - Linear issue tracking via GraphQL API
 - **mcp-builder** - Creating MCP (Model Context Protocol) servers to integrate external APIs and services
+- **slack** - Slack integration for searching and sending messages
 - **webapp-testing** - Testing web applications using Playwright for UI verification and debugging
 - **yelp-search** - Searching and retrieving business information from Yelp
 
 ### Meta
 
-- **skill-creator** - Guide for creating effective skills that extend agent capabilities
-- **skill-learning** - Meta-skill for recognizing learnings and contributing improvements back to the knowledge base
-
-### Templates
-
-- **frontend-design** - Creating production-grade frontend interfaces with high design quality
-- **internal-comms** - Writing internal communications (status reports, updates, FAQs, etc.)
-- **nextjs-saas** - Template for building SaaS applications with Next.js
+- **skill-development** - Guide for creating and contributing skills to the knowledge base
 
 ## Contributing
 
