@@ -1,10 +1,10 @@
 ---
-name: letta-app-development
+name: letta-api-client
 description: Build applications with the Letta API — a model-agnostic, stateful API for building persistent agents with memory and long-term learning. Covers SDK patterns for Python and TypeScript. Includes 24 working code examples.
 license: MIT
 ---
 
-# Letta App Development Skill
+# Letta API Client Skill
 
 Build applications on top of the **Letta API** — a model-agnostic, stateful API for building persistent agents with memory and long-term learning. The Letta API powers [Letta Code](https://github.com/letta-ai/letta-code) and the [Learning SDK](https://github.com/letta-ai/learning-sdk). This skill covers the core patterns for creating agents, managing memory, building custom tools, and handling multi-user scenarios.
 
