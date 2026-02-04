@@ -54,7 +54,7 @@ Skills are organized into practical, flat categories:
 ```
 letta/                   # Letta product ecosystem
 ├── agent-development/   # Agent design and architecture
-├── app-development/     # Building applications with Letta
+├── letta-api-client/    # Building applications with the Letta API using the Python and TypeScript SDKs
 ├── benchmarks/          # Testing and benchmarking agents
 ├── conversations/       # Conversation management
 ├── fleet-management/    # Managing multiple agents
@@ -87,7 +87,7 @@ templates/               # Reusable templates and patterns
 ### Letta
 
 - **agent-development** - Comprehensive guide for designing and building Letta agents (architecture selection, memory design, model selection, tool configuration)
-- **app-development** - Building applications powered by Letta agents
+- **letta-api-client** - Building applications with the Letta API using the Python and TypeScript SDKs (agents, tools, memory, multi-user patterns)
 - **benchmarks** - Testing and benchmarking Letta agents
 - **conversations** - Managing agent conversations and message history
 - **fleet-management** - Managing and orchestrating multiple Letta agents
