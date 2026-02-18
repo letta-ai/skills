@@ -4,10 +4,11 @@
 # Usage:
 #   migrate.sh <repo-url> <target-dir> [--copy-envs-from <old-clone>] [--main-branch <branch>]
 #
-# Examples:
+# Example (simple):
 #   migrate.sh git@github.com:org/repo.git ~/projects/repo
-#   migrate.sh git@github.com:org/repo.git ~/projects/repo --copy-envs-from ~/projects/repo-old
-#   migrate.sh git@github.com:org/repo.git ~/projects/repo --main-branch dev
+#
+# Example (monorepo with nested .env files):
+#   migrate.sh git@github.com:org/repo.git ~/projects/repo --copy-envs-from ~/projects/repo-old --main-branch dev
 
 set -euo pipefail
 
@@ -22,7 +23,7 @@ MAIN_BRANCH="main"
 shift 2
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --copy-envs-from)
+    --copy-envs-from|--move-env-from)
       ENV_SOURCE="${2:?$1 requires a path}"
       shift 2
       ;;
@@ -67,7 +68,7 @@ git config commit.gpgsign true
 echo "Fetching all remote branches..."
 git fetch --all --quiet
 
-# ── Create primary worktree with tracking ────────────────────────────────────
+# ── Create main worktree with tracking ───────────────────────────────────────
 echo "Creating '$MAIN_BRANCH' worktree..."
 git worktree add "$MAIN_BRANCH" "$MAIN_BRANCH"
 
@@ -78,19 +79,24 @@ git -C "$MAIN_BRANCH" branch --set-upstream-to="origin/$MAIN_BRANCH" "$MAIN_BRAN
 mkdir -p feat fix hotfix docs
 
 # ── Copy & symlink .env files ─────────────────────────────────────────────────
-WORKSPACE="$(pwd)"
-
 if [[ -n "$ENV_SOURCE" ]]; then
   if [[ ! -d "$ENV_SOURCE" ]]; then
     echo "Warning: ENV_SOURCE '$ENV_SOURCE' does not exist, skipping env copy." >&2
   else
     echo "Discovering .env files in $ENV_SOURCE..."
+    WORKSPACE="$(pwd)"
     ENV_DIR="$WORKSPACE/.envs"
     mkdir -p "$ENV_DIR"
 
-    # Find all .env, .env.*, and .envrc files; skip generated/dependency directories
+    # Find all .env, .env.*, and .envrc files (skip node_modules, .git, .bare, build dirs)
+    # Also skip files tracked by git — those should stay as real files, not symlinks
     while IFS= read -r envfile; do
       relpath="${envfile#$ENV_SOURCE/}"
+      # Skip if tracked by git
+      if git -C "$ENV_SOURCE" ls-files --error-unmatch "$relpath" &>/dev/null; then
+        echo "  Skipping (tracked by git): $relpath"
+        continue
+      fi
       destfile="$ENV_DIR/$relpath"
       mkdir -p "$(dirname "$destfile")"
       cp "$envfile" "$destfile"
@@ -102,19 +108,22 @@ if [[ -n "$ENV_SOURCE" ]]; then
         -not -path "*/.next/*" \
         -not -path "*/dist/*" \
         -not -path "*/build/*" \
+        -not -path "*/.dist/*" \
         -not -path "*/__pycache__/*" \
         -not -path "*/.venv/*" \
         \( -name ".env" -o -name ".env.*" -o -name ".envrc" \) \
         | sort)
 
+    # Symlink all discovered env files into the main worktree
     echo "Symlinking env files into $MAIN_BRANCH/..."
     bash "$SCRIPT_DIR/link-envs.sh" "$WORKSPACE" "$MAIN_BRANCH"
   fi
 fi
 
-# ── Symlink .letta into primary worktree ──────────────────────────────────────
+# ── Symlink .letta into main worktree ────────────────────────────────────────
 # .letta lives at workspace root and is symlinked into each worktree so
-# agent settings are shared and visible in every checkout.
+# Letta Code settings are shared and visible in each checkout.
+WORKSPACE="$(pwd)"
 if [[ -d "$WORKSPACE/.letta" ]]; then
   ln -sf "$WORKSPACE/.letta" "$WORKSPACE/$MAIN_BRANCH/.letta"
   echo "Linked .letta into $MAIN_BRANCH/"
@@ -125,13 +134,14 @@ echo ""
 echo "Bare repo worktree setup complete!"
 echo ""
 echo "  Workspace root:  $TARGET_DIR"
-echo "  Primary worktree: $TARGET_DIR/$MAIN_BRANCH"
-echo "  Git data:         $TARGET_DIR/.bare"
-[[ -d "$TARGET_DIR/.envs" ]] && echo "  Env files:        $TARGET_DIR/.envs (symlinked into $MAIN_BRANCH/)"
+echo "  Main worktree:   $TARGET_DIR/$MAIN_BRANCH"
+echo "  Git data:        $TARGET_DIR/.bare"
+if [[ -d "$TARGET_DIR/.envs" ]]; then
+  echo "  Env files:       $TARGET_DIR/.envs (symlinked into $MAIN_BRANCH/)"
+fi
 echo ""
 echo "Next steps:"
-echo "  cd $TARGET_DIR/$MAIN_BRANCH && <package-manager> install"
+echo "  cd $TARGET_DIR/$MAIN_BRANCH && <package-manager> install   # install deps"
 echo ""
 echo "To create a feature worktree:"
-echo "  cd $TARGET_DIR"
 echo "  bash ~/.letta/skills/bare-repo-worktrees/scripts/new-worktree.sh feat/my-feature $MAIN_BRANCH"

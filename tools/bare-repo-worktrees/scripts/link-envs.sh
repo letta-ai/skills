@@ -5,8 +5,7 @@
 #   link-envs.sh <workspace-root> <worktree-path-or-name>
 #
 # The worktree path can be absolute or relative to the workspace root.
-# Absolute symlink paths are used so links work regardless of nesting depth
-# (e.g., feat/my-feature won't break with relative paths).
+# Absolute paths in .envs are used so symlinks work regardless of nesting depth.
 
 set -euo pipefail
 
@@ -44,6 +43,7 @@ while IFS= read -r envfile; do
   mkdir -p "$targetdir"
 
   if [[ -L "$target" ]]; then
+    # Already a symlink — update if it points somewhere wrong
     existing="$(readlink "$target")"
     if [[ "$existing" == "$envfile" ]]; then
       echo "  Already linked: $relpath"
@@ -53,6 +53,11 @@ while IFS= read -r envfile; do
       ln -sf "$envfile" "$target"
     fi
   elif [[ -f "$target" ]]; then
+    # Check if file is tracked by git — if so, don't replace it
+    if git -C "$WORKTREE" ls-files --error-unmatch "$relpath" &>/dev/null; then
+      echo "  Skipping (tracked by git): $relpath"
+      continue
+    fi
     echo "  Replacing file with link: $relpath"
     rm "$target"
     ln -sf "$envfile" "$target"
