@@ -1,57 +1,26 @@
 #!/usr/bin/env bash
-# Create a new git worktree and automatically symlink all shared files:
-#   - All .env / .envrc / .env.* files from .envs/
-#   - .letta/ directory (from workspace root)
+# Create a new git worktree and automatically symlink shared files from .shared/
 #
 # Usage:
 #   new-worktree.sh <branch-name> [base-branch]
 #   new-worktree.sh --link-only <existing-worktree-path>
 #
-# Must be run from the workspace root (the directory containing .bare/ and .git pointer file).
+# Must be run from the workspace root (the directory containing .bare/ and .git).
 #
 # Examples:
-#   new-worktree.sh feat/my-feature main
-#   new-worktree.sh fix/urgent-bug dev
-#   new-worktree.sh --link-only feat/existing-worktree   # just re-add symlinks
+#   new-worktree.sh feat/my-feature dev
+#   new-worktree.sh fix/urgent-bug main
+#   new-worktree.sh --link-only /path/to/existing/worktree   # just add symlinks
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-link_shared_files() {
-  local workspace="$1"
-  local worktree="$2"
-
-  # Symlink all env files
-  if [[ -d "$workspace/.envs" ]]; then
-    bash "$SCRIPT_DIR/link-envs.sh" "$workspace" "$worktree"
-  else
-    echo "(No .envs/ at workspace root — skipping env symlinking)"
-    echo "Tip: create $workspace/.envs/ and populate it to enable auto-symlinking."
-  fi
-
-  # Symlink .letta
-  if [[ -d "$workspace/.letta" ]]; then
-    if [[ ! -e "$worktree/.letta" ]]; then
-      ln -sf "$workspace/.letta" "$worktree/.letta"
-      echo "Linked .letta -> $workspace/.letta"
-    else
-      echo "  .letta already present in worktree"
-    fi
-  fi
-}
-
 # ── Parse arguments ───────────────────────────────────────────────────────────
 if [[ "${1:-}" == "--link-only" ]]; then
-  WORKTREE_ARG="${2:?--link-only requires a worktree path or name}"
+  WORKTREE_PATH="${2:?--link-only requires a worktree path}"
   WORKSPACE="$(pwd)"
-  if [[ "$WORKTREE_ARG" = /* ]]; then
-    WORKTREE="$WORKTREE_ARG"
-  else
-    WORKTREE="$WORKSPACE/$WORKTREE_ARG"
-  fi
-  link_shared_files "$WORKSPACE" "$WORKTREE"
+  bash "$SCRIPT_DIR/link-shared.sh" "$WORKSPACE" "$WORKTREE_PATH"
   exit 0
 fi
 
@@ -71,15 +40,15 @@ WORKTREE="$WORKSPACE/$BRANCH"
 
 if [[ -d "$WORKTREE" ]]; then
   echo "Directory already exists: $WORKTREE"
-  echo "To re-link shared files: new-worktree.sh --link-only $BRANCH"
+  echo "If this is an existing worktree, run:  new-worktree.sh --link-only $WORKTREE"
   exit 1
 fi
 
-# Create parent directory for slash-named branches (e.g. feat/my-feature)
+# Create parent directory if branch contains a slash (e.g. feat/my-feature)
 mkdir -p "$(dirname "$WORKTREE")"
 
 if git show-ref --quiet "refs/remotes/origin/$BRANCH" 2>/dev/null; then
-  # Branch exists on remote — check it out with tracking
+  # Branch exists on remote — check it out and track it
   echo "Checking out existing remote branch: $BRANCH"
   git worktree add "$WORKTREE" --track -b "$BRANCH" "origin/$BRANCH"
 elif [[ -n "$BASE_BRANCH" ]]; then
@@ -92,12 +61,63 @@ else
   git worktree add "$WORKTREE" -b "$BRANCH"
 fi
 
-# ── Symlink shared files ──────────────────────────────────────────────────────
-link_shared_files "$WORKSPACE" "$WORKTREE"
+# ── Add to zoxide for quick navigation ─────────────────────────────────────────
+if command -v zoxide &>/dev/null; then
+  zoxide add "$WORKTREE"
+  echo "Added to zoxide: $WORKTREE"
+fi
+
+# ── Symlink shared files ─────────────────────────────────────────────────────
+# link-shared.sh handles .shared/ (preferred) and .envs/ (fallback) automatically
+bash "$SCRIPT_DIR/link-shared.sh" "$WORKSPACE" "$WORKTREE"
+
+# ── Detect package managers ───────────────────────────────────────────────────
+HAS_PYTHON=false
+HAS_NODE=false
+HAS_CARGO=false
+
+[[ -f "$WORKTREE/pyproject.toml" || -f "$WORKTREE/requirements.txt" || -f "$WORKTREE/setup.py" ]] && HAS_PYTHON=true
+[[ -f "$WORKTREE/package.json" ]] && HAS_NODE=true
+[[ -f "$WORKTREE/Cargo.toml" ]] && HAS_CARGO=true
+
+# Detect Node package manager preference
+NODE_PM="npm install"
+if [[ -f "$WORKTREE/pnpm-lock.yaml" ]]; then
+  NODE_PM="pnpm install"
+elif [[ -f "$WORKTREE/bun.lockb" || -f "$WORKTREE/bun.lock" ]]; then
+  NODE_PM="bun install"
+elif [[ -f "$WORKTREE/yarn.lock" ]]; then
+  NODE_PM="yarn install"
+fi
+
+# ── Install dependencies ─────────────────────────────────────────────────────
+if $HAS_PYTHON || $HAS_NODE || $HAS_CARGO; then
+  echo ""
+  echo "Installing dependencies..."
+  (
+    cd "$WORKTREE"
+    if $HAS_PYTHON; then
+      echo "  Running: uv sync"
+      uv sync
+    fi
+    if $HAS_NODE; then
+      echo "  Running: $NODE_PM"
+      $NODE_PM
+    fi
+    if $HAS_CARGO; then
+      echo "  Running: cargo build"
+      cargo build
+    fi
+  )
+fi
 
 # ── Done ──────────────────────────────────────────────────────────────────────
 echo ""
-echo "Worktree ready: $WORKTREE"
-echo ""
-echo "Next:"
-echo "  cd $WORKTREE && <package-manager> install"
+echo "✅ Worktree ready: $WORKTREE"
+echo "  cd $WORKTREE"
+
+if $HAS_PYTHON; then
+  echo ""
+  echo "  Tip: always run tests via 'uv run python -m pytest'"
+  echo "  (bare 'python -m pytest' may use the wrong .venv)"
+fi
