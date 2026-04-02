@@ -42,12 +42,14 @@ Link to the official doc instead of restating the export steps in detail, since 
 
 ### 1. Inspect the export
 
+These examples assume the skills repo is cloned into `.skills/` in the current project, as described in this repo's README.
+
 List conversations first:
 
 ```bash
-python3 ~/.skills/importing-chatgpt-memory/scripts/list-conversations.py <export.zip>
-python3 ~/.skills/importing-chatgpt-memory/scripts/list-conversations.py <export.zip> --title-contains memory
-python3 ~/.skills/importing-chatgpt-memory/scripts/list-conversations.py <export.zip> --start-index 200 --end-index 260
+python3 .skills/letta/importing-chatgpt-memory/scripts/list-conversations.py <export.zip>
+python3 .skills/letta/importing-chatgpt-memory/scripts/list-conversations.py <export.zip> --title-contains memory
+python3 .skills/letta/importing-chatgpt-memory/scripts/list-conversations.py <export.zip> --start-index 200 --end-index 260
 ```
 
 Use this step to find the right title, date range, and conversation indices.
@@ -57,13 +59,13 @@ Use this step to find the right title, date range, and conversation indices.
 Render a single conversation when you want to inspect it closely:
 
 ```bash
-python3 ~/.skills/importing-chatgpt-memory/scripts/render-conversation.py <export.zip> --index 12 --output /tmp/chatgpt-12.md
+python3 .skills/letta/importing-chatgpt-memory/scripts/render-conversation.py <export.zip> --index 12 --output /tmp/chatgpt-12.md
 ```
 
 Useful cleanup flags:
 
 ```bash
-python3 ~/.skills/importing-chatgpt-memory/scripts/render-conversation.py <export.zip> \
+python3 .skills/letta/importing-chatgpt-memory/scripts/render-conversation.py <export.zip> \
   --index 12 \
   --skip-empty-hidden \
   --compact-nontext \
@@ -78,7 +80,7 @@ Use `--compact-nontext` when image/file metadata blobs are drowning out the huma
 When the export is large, render a range procedurally instead of inventing a parser framework:
 
 ```bash
-python3 ~/.skills/importing-chatgpt-memory/scripts/render-range.py <export.zip> \
+python3 .skills/letta/importing-chatgpt-memory/scripts/render-range.py <export.zip> \
   --start-index 220 \
   --end-index 274 \
   --output-dir /tmp/chatgpt-range \
@@ -89,7 +91,7 @@ python3 ~/.skills/importing-chatgpt-memory/scripts/render-range.py <export.zip> 
 Or create one concatenated markdown document:
 
 ```bash
-python3 ~/.skills/importing-chatgpt-memory/scripts/render-range.py <export.zip> \
+python3 .skills/letta/importing-chatgpt-memory/scripts/render-range.py <export.zip> \
   --start-index 220 \
   --end-index 274 \
   --concat-output /tmp/chatgpt-range.md \
