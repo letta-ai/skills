@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — Chart View</title>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <style>
+        /* ── Theme Variables ──────────────────────────────────── */
+        :root {
+            --dash-bg: #0d1117;
+            --dash-surface: #161b22;
+            --dash-surface-alt: #21262d;
+            --dash-border: #30363d;
+            --dash-text: #c9d1d9;
+            --dash-text-muted: #8b949e;
+            --dash-accent: #58a6ff;
+            --dash-accent-light: #79c0ff;
+            --dash-success: #3fb950;
+            --dash-warning: #d29922;
+            --dash-error: #f85149;
+            --dash-sidebar-width: 360px;
+        }
+
+        :root[data-theme="light"] {
+            --dash-bg: #ffffff;
+            --dash-surface: #f6f8fa;
+            --dash-surface-alt: #eaeef2;
+            --dash-border: #d0d7de;
+            --dash-text: #1f2328;
+            --dash-text-muted: #656d76;
+            --dash-accent: #0969da;
+            --dash-accent-light: #218bff;
+            --dash-success: #1a7f37;
+            --dash-warning: #9a6700;
+            --dash-error: #cf222e;
+        }
+
+        /* ── Reset & Base ─────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--dash-bg);
+            color: var(--dash-text);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ── Layout ───────────────────────────────────────────── */
+        .dashboard-layout {
+            display: flex;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        .dashboard-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1.25rem;
+            background: var(--dash-surface);
+            border-bottom: 1px solid var(--dash-border);
+            flex-shrink: 0;
+        }
+
+        .dashboard-title {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .dashboard-body {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .chart-area {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        /* ── Summary Cards ────────────────────────────────────── */
+        .summary-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--dash-border);
+        }
+
+        .summary-card {
+            background: var(--dash-surface-alt);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+        }
+
+        .summary-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--dash-text-muted);
+        }
+
+        .summary-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--dash-accent);
+            line-height: 1.3;
+        }
+
+        .summary-delta {
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .summary-delta.up { color: var(--dash-success); }
+        .summary-delta.down { color: var(--dash-error); }
+
+        /* ── Chart Container ──────────────────────────────────── */
+        .chart-container {
+            flex: 1;
+            padding: 0.5rem;
+            min-height: 0;
+        }
+
+        #chart {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ── Theme Toggle ─────────────────────────────────────── */
+        .theme-toggle {
+            background: var(--dash-surface-alt);
+            border: 1px solid var(--dash-border);
+            color: var(--dash-text-muted);
+            padding: 0.35rem 0.65rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: color 0.15s, border-color 0.15s;
+        }
+
+        .theme-toggle:hover {
+            color: var(--dash-text);
+            border-color: var(--dash-accent);
+        }
+
+        /* ── Chart Type Selector ──────────────────────────────── */
+        .chart-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid var(--dash-border);
+            padding: 0 1.25rem;
+        }
+
+        .chart-tab {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--dash-text-muted);
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            cursor: pointer;
+            transition: color 0.15s, border-color 0.15s;
+        }
+
+        .chart-tab:hover { color: var(--dash-text); }
+        .chart-tab.active { color: var(--dash-accent); border-bottom-color: var(--dash-accent); }
+
+        /* ── Freshness Badge ──────────────────────────────────── */
+        .freshness-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.75rem;
+            color: var(--dash-text-muted);
+        }
+
+        .freshness-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--dash-success);
+        }
+
+        .freshness-dot.aging { background: var(--dash-warning); }
+        .freshness-dot.stale { background: var(--dash-error); }
+
+        /* ── Detail Sidebar ───────────────────────────────────── */
+        .detail-sidebar {
+            width: var(--dash-sidebar-width);
+            min-width: var(--dash-sidebar-width);
+            background: var(--dash-surface);
+            border-left: 1px solid var(--dash-border);
+            display: flex;
+            flex-direction: column;
+            transform: translateX(0);
+            transition: transform 0.3s ease, width 0.3s ease, min-width 0.3s ease;
+        }
+
+        .detail-sidebar.closed {
+            width: 0;
+            min-width: 0;
+            transform: translateX(100%);
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--dash-border);
+            flex-shrink: 0;
+        }
+
+        .sidebar-header h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .sidebar-close {
+            background: none;
+            border: none;
+            color: var(--dash-text-muted);
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+
+        .sidebar-close:hover { color: var(--dash-text); }
+
+        .sidebar-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.25rem;
+        }
+
+        .detail-field { margin-bottom: 1rem; }
+
+        .detail-label {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--dash-text-muted);
+            margin-bottom: 0.25rem;
+        }
+
+        .detail-value {
+            display: block;
+            font-size: 0.9rem;
+            color: var(--dash-text);
+            line-height: 1.5;
+        }
+
+        .detail-badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: var(--dash-surface-alt);
+            color: var(--dash-accent);
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--dash-surface);
+            border: 1px solid var(--dash-border);
+            color: var(--dash-text-muted);
+            width: 24px;
+            height: 48px;
+            border-radius: 6px 0 0 6px;
+            cursor: pointer;
+            z-index: 5;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+        }
+
+        .detail-sidebar.closed ~ .chart-area .sidebar-toggle { display: flex; }
+
+        /* ── States ───────────────────────────────────────────── */
+        .dashboard-state {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            z-index: 15;
+            background: var(--dash-bg);
+        }
+
+        .dashboard-state.hidden { display: none; }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--dash-border);
+            border-top-color: var(--dash-accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .state-text { font-size: 0.9rem; color: var(--dash-text-muted); }
+        .state-error { color: var(--dash-error); font-weight: 600; }
+
+        .retry-btn {
+            padding: 0.4rem 1rem;
+            border-radius: 6px;
+            border: 1px solid var(--dash-border);
+            background: var(--dash-surface-alt);
+            color: var(--dash-text);
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .retry-btn:hover { border-color: var(--dash-accent); }
+
+        /* ── Responsive ───────────────────────────────────────── */
+        @media (max-width: 1024px) {
+            .dashboard-body { flex-direction: column; }
+            .detail-sidebar {
+                width: 100%;
+                min-width: 100%;
+                max-height: 50vh;
+                border-left: none;
+                border-top: 1px solid var(--dash-border);
+            }
+            .detail-sidebar.closed {
+                max-height: 0;
+                transform: translateY(100%);
+            }
+            .summary-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-layout">
+        <!-- Header -->
+        <div class="dashboard-header">
+            <span class="dashboard-title">Analytics Dashboard</span>
+            <div class="header-controls">
+                <div class="freshness-badge" id="freshness">
+                    <span class="freshness-dot"></span>
+                    <span class="freshness-text">Loading...</span>
+                </div>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <span id="theme-icon">&#9790;</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="summary-row" id="summary-row">
+            <!-- Populated dynamically -->
+        </div>
+
+        <!-- Chart Tabs -->
+        <div class="chart-tabs" id="chart-tabs">
+            <button class="chart-tab active" onclick="switchChart('line', this)">Time Series</button>
+            <button class="chart-tab" onclick="switchChart('bar', this)">Bar</button>
+            <button class="chart-tab" onclick="switchChart('scatter', this)">Scatter</button>
+        </div>
+
+        <div class="dashboard-body">
+            <!-- Chart Area -->
+            <div class="chart-area">
+                <div class="chart-container">
+                    <div id="chart"></div>
+                </div>
+
+                <!-- Loading -->
+                <div class="dashboard-state" id="state-loading">
+                    <div class="spinner"></div>
+                    <p class="state-text">Loading data...</p>
+                </div>
+
+                <!-- Error -->
+                <div class="dashboard-state hidden" id="state-error">
+                    <p class="state-error">Failed to load data</p>
+                    <p class="state-text" id="error-detail"></p>
+                    <button class="retry-btn" onclick="loadData()">Retry</button>
+                </div>
+
+                <!-- Empty -->
+                <div class="dashboard-state hidden" id="state-empty">
+                    <p class="state-text">No data available</p>
+                    <p style="font-size:0.8rem;color:var(--dash-text-muted)">Check your data source or adjust filters.</p>
+                </div>
+            </div>
+
+            <!-- Detail Sidebar -->
+            <div class="detail-sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <h3 id="sidebar-title">Select a data point</h3>
+                    <button class="sidebar-close" onclick="closeSidebar()">&times;</button>
+                </div>
+                <div class="sidebar-body" id="sidebar-body">
+                    <p class="state-text" style="text-align:center;margin-top:2rem;">
+                        Click a data point on the chart to see details.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ── Configuration ────────────────────────────────────────
+    const CHART_COLORS = ['#58a6ff', '#3fb950', '#d29922', '#f78166', '#a371f7', '#f0883e'];
+
+    // ── Sample Data ──────────────────────────────────────────
+    // CUSTOMIZE: Replace with your fetchData() implementation
+    function fetchData() {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const now = new Date();
+                const data = [];
+                for (let i = 29; i >= 0; i--) {
+                    const date = new Date(now);
+                    date.setDate(date.getDate() - i);
+                    data.push({
+                        date: date.toISOString().split('T')[0],
+                        revenue: Math.round(800 + Math.random() * 400),
+                        users: Math.round(120 + Math.random() * 80),
+                        sessions: Math.round(300 + Math.random() * 200),
+                        category: ['Web', 'Mobile', 'API'][Math.floor(Math.random() * 3)],
+                        region: ['US', 'EU', 'APAC'][Math.floor(Math.random() * 3)],
+                    });
+                }
+                resolve(data);
+            }, 500);
+        });
+    }
+
+    // ── State ────────────────────────────────────────────────
+    let dashboardData = [];
+    let currentChart = 'line';
+    let lastUpdated = null;
+
+    // ── Initialize ───────────────────────────────────────────
+    async function loadData() {
+        showState('loading');
+        try {
+            dashboardData = await fetchData();
+            lastUpdated = new Date();
+
+            if (!dashboardData.length) {
+                showState('empty');
+                return;
+            }
+
+            showState(null);
+            renderSummary();
+            renderChart();
+            updateFreshness();
+        } catch (err) {
+            document.getElementById('error-detail').textContent = err.message;
+            showState('error');
+        }
+    }
+
+    function showState(state) {
+        ['loading', 'error', 'empty'].forEach(s => {
+            document.getElementById(`state-${s}`).classList.toggle('hidden', s !== state);
+        });
+    }
+
+    // ── Summary Cards ────────────────────────────────────────
+    function renderSummary() {
+        const totalRevenue = dashboardData.reduce((s, d) => s + d.revenue, 0);
+        const totalUsers = dashboardData.reduce((s, d) => s + d.users, 0);
+        const avgSessions = Math.round(dashboardData.reduce((s, d) => s + d.sessions, 0) / dashboardData.length);
+        const latestRevenue = dashboardData[dashboardData.length - 1]?.revenue || 0;
+
+        // CUSTOMIZE: Replace with your summary metrics
+        const cards = [
+            { label: 'Total Revenue', value: `$${totalRevenue.toLocaleString()}`, delta: '+12%', dir: 'up' },
+            { label: 'Total Users', value: totalUsers.toLocaleString(), delta: '+8%', dir: 'up' },
+            { label: 'Avg Sessions/Day', value: avgSessions.toLocaleString(), delta: '-3%', dir: 'down' },
+            { label: 'Latest Revenue', value: `$${latestRevenue}`, delta: '', dir: '' },
+        ];
+
+        document.getElementById('summary-row').innerHTML = cards.map(c => `
+            <div class="summary-card">
+                <div class="summary-label">${c.label}</div>
+                <div class="summary-value">${c.value}</div>
+                ${c.delta ? `<span class="summary-delta ${c.dir}">${c.delta}</span>` : ''}
+            </div>
+        `).join('');
+    }
+
+    // ── Chart Rendering ──────────────────────────────────────
+    function isDark() {
+        return document.documentElement.getAttribute('data-theme') !== 'light';
+    }
+
+    function plotlyTheme() {
+        const dark = isDark();
+        return {
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: dark ? '#c9d1d9' : '#1f2328', family: '-apple-system, BlinkMacSystemFont, sans-serif' },
+            xaxis: { gridcolor: dark ? '#21262d' : '#eaeef2', linecolor: dark ? '#30363d' : '#d0d7de' },
+            yaxis: { gridcolor: dark ? '#21262d' : '#eaeef2', linecolor: dark ? '#30363d' : '#d0d7de' },
+            margin: { l: 50, r: 20, t: 30, b: 40 },
+        };
+    }
+
+    function renderChart() {
+        const el = document.getElementById('chart');
+        const layout = { ...plotlyTheme(), showlegend: true, legend: { x: 0, y: 1.1, orientation: 'h' } };
+
+        let traces;
+        if (currentChart === 'line') {
+            // CUSTOMIZE: Replace x/y fields with your data schema
+            traces = [
+                {
+                    x: dashboardData.map(d => d.date),
+                    y: dashboardData.map(d => d.revenue),
+                    name: 'Revenue',
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    line: { color: CHART_COLORS[0], width: 2 },
+                    marker: { size: 6 },
+                },
+                {
+                    x: dashboardData.map(d => d.date),
+                    y: dashboardData.map(d => d.users),
+                    name: 'Users',
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    line: { color: CHART_COLORS[1], width: 2 },
+                    marker: { size: 6 },
+                    yaxis: 'y2',
+                },
+            ];
+            layout.yaxis2 = {
+                ...layout.yaxis,
+                overlaying: 'y',
+                side: 'right',
+                title: 'Users',
+            };
+        } else if (currentChart === 'bar') {
+            const categories = [...new Set(dashboardData.map(d => d.category))];
+            traces = categories.map((cat, i) => ({
+                x: dashboardData.filter(d => d.category === cat).map(d => d.date),
+                y: dashboardData.filter(d => d.category === cat).map(d => d.revenue),
+                name: cat,
+                type: 'bar',
+                marker: { color: CHART_COLORS[i % CHART_COLORS.length] },
+            }));
+            layout.barmode = 'stack';
+        } else if (currentChart === 'scatter') {
+            const regions = [...new Set(dashboardData.map(d => d.region))];
+            traces = regions.map((region, i) => ({
+                x: dashboardData.filter(d => d.region === region).map(d => d.users),
+                y: dashboardData.filter(d => d.region === region).map(d => d.revenue),
+                name: region,
+                mode: 'markers',
+                type: 'scatter',
+                marker: {
+                    size: dashboardData.filter(d => d.region === region).map(d => d.sessions / 30),
+                    color: CHART_COLORS[i % CHART_COLORS.length],
+                    opacity: 0.7,
+                },
+                text: dashboardData.filter(d => d.region === region).map(d => d.date),
+            }));
+            layout.xaxis.title = 'Users';
+            layout.yaxis.title = 'Revenue';
+        }
+
+        Plotly.newPlot(el, traces, layout, {
+            responsive: true,
+            displayModeBar: false,
+        });
+
+        // Click handler → populate sidebar
+        el.on('plotly_click', function(eventData) {
+            if (!eventData.points.length) return;
+            const pt = eventData.points[0];
+            const idx = pt.pointIndex;
+            const record = dashboardData[idx] || dashboardData.find(d => d.date === pt.x);
+            if (record) populateSidebar(record);
+        });
+    }
+
+    function switchChart(type, btn) {
+        currentChart = type;
+        document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        renderChart();
+    }
+
+    // ── Sidebar ──────────────────────────────────────────────
+    function populateSidebar(record) {
+        document.getElementById('sidebar-title').textContent = record.date;
+
+        // CUSTOMIZE: Replace with your detail fields
+        const body = document.getElementById('sidebar-body');
+        body.innerHTML = `
+            <div class="detail-field">
+                <span class="detail-label">Date</span>
+                <span class="detail-value">${record.date}</span>
+            </div>
+            <div class="detail-field">
+                <span class="detail-label">Revenue</span>
+                <span class="detail-value" style="font-size:1.25rem;font-weight:700;color:var(--dash-accent)">
+                    $${record.revenue.toLocaleString()}
+                </span>
+            </div>
+            <div class="detail-field">
+                <span class="detail-label">Users</span>
+                <span class="detail-value">${record.users.toLocaleString()}</span>
+            </div>
+            <div class="detail-field">
+                <span class="detail-label">Sessions</span>
+                <span class="detail-value">${record.sessions.toLocaleString()}</span>
+            </div>
+            <div class="detail-field">
+                <span class="detail-label">Category</span>
+                <span class="detail-badge">${record.category}</span>
+            </div>
+            <div class="detail-field">
+                <span class="detail-label">Region</span>
+                <span class="detail-badge">${record.region}</span>
+            </div>
+        `;
+
+        document.getElementById('sidebar').classList.remove('closed');
+    }
+
+    function closeSidebar() {
+        document.getElementById('sidebar').classList.add('closed');
+    }
+
+    // ── Theme ────────────────────────────────────────────────
+    function toggleTheme() {
+        const root = document.documentElement;
+        const next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+        root.setAttribute('data-theme', next);
+        document.getElementById('theme-icon').innerHTML = next === 'light' ? '&#9728;' : '&#9790;';
+        renderChart(); // Re-render with new theme colors
+    }
+
+    // ── Freshness ────────────────────────────────────────────
+    function updateFreshness() {
+        if (!lastUpdated) return;
+        const diff = Math.floor((new Date() - lastUpdated) / 1000);
+        const dot = document.querySelector('#freshness .freshness-dot');
+        const text = document.querySelector('#freshness .freshness-text');
+
+        let label, cls;
+        if (diff < 60) { label = `${diff}s ago`; cls = 'fresh'; }
+        else if (diff < 3600) { label = `${Math.floor(diff / 60)}m ago`; cls = diff < 300 ? 'fresh' : 'aging'; }
+        else { label = `${Math.floor(diff / 3600)}h ago`; cls = 'stale'; }
+
+        dot.className = `freshness-dot ${cls}`;
+        text.textContent = `Updated ${label}`;
+    }
+
+    setInterval(updateFreshness, 10000);
+
+    // ── Keyboard Shortcuts ───────────────────────────────────
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeSidebar();
+    });
+
+    // ── Start ────────────────────────────────────────────────
+    loadData();
+    </script>
+</body>
+</html>
