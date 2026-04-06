@@ -82,7 +82,7 @@ Examples:
 - current employer / role when explicitly stated and recent
 - stable response preferences
 - formatting preferences
-- collaboration preferences such as “fewer questions at once”
+- collaboration preferences such as "fewer questions at once"
 - canonical ChatGPT saved-memory text when it is explicit and current-looking
 
 When you write while learning, tell the user what you wrote so the progress is visible.
