@@ -21,6 +21,17 @@ A typical ChatGPT export often contains:
 
 The conversation history is usually sharded across multiple `conversations-*.json` files.
 
+## Account metadata caution
+
+`user.json`, `user_settings.json`, and `export_manifest.json` can be useful for understanding the export, but they often include:
+
+- account identifiers
+- email / phone data
+- product settings
+- onboarding flags
+
+These files are usually **not** good candidates for active Letta memory. Treat them as audit material unless the user specifically wants something from them imported.
+
 ## Conversation structure
 
 Each shard contains a list of conversation objects. Each conversation usually includes:
@@ -50,10 +61,35 @@ In recent exports, explicit ChatGPT saved memory often appears as:
 
 - `about_user_message`
 - `about_model_message`
+- `content.user_profile` on `user_editable_context` messages
+- `content.user_instructions` on `user_editable_context` messages
 
 Typical interpretation:
 - `about_user_message`: stable facts ChatGPT believed about the user
 - `about_model_message`: custom-instruction-like response preferences
+- `user_profile`: either user-profile text or runtime profile context bundled into the chat
+- `user_instructions`: custom-instruction-like guidance, often highly relevant for response-style cloning
+
+These fields are often repeated across many conversations. Deduplicate repeated values before turning them into memory proposals.
+
+Also note: some hidden messages are **runtime execution context**, not durable memory. Common examples include timezone, current date, current location, or instructions to search the web before answering current-events questions. Keep those separate from actual user memory.
+
+## Best first-pass extraction
+
+For onboarding, do not start with random transcript rendering.
+
+Start with a whole-export pass over hidden saved memory and editable context:
+
+```bash
+python3 scripts/extract-saved-memory.py <export.zip>
+python3 scripts/extract-saved-memory.py <export.zip> --json --output /tmp/chatgpt-saved-memory.json
+python3 scripts/build-memory-preview.py /tmp/chatgpt-saved-memory.json
+```
+
+This is the quickest way to answer:
+- what ChatGPT explicitly remembered
+- what looks current vs historical
+- what belongs in active Letta memory vs progressive memory
 
 ## Practical implication
 
