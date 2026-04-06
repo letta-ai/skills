@@ -98,6 +98,7 @@ meta/                    # Skills about the skill system
 - **imessage** - Integrating with iMessage on macOS
 - **linear** - Linear issue tracking via GraphQL API
 - **mcp-builder** - Creating MCP (Model Context Protocol) servers to integrate external APIs and services
+- **cross-validated-search** - Evidence-aware web search, page reading, and claim verification with CLI and MCP surfaces
 - **slack** - Slack integration for searching and sending messages
 - **webapp-testing** - Testing web applications using Playwright for UI verification and debugging
 - **yelp-search** - Searching and retrieving business information from Yelp
