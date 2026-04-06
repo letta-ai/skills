@@ -121,7 +121,7 @@ Start by listing conversations and surfacing hidden-context-heavy candidates.
 ```bash
 python3 scripts/list-conversations.py <export.zip>
 python3 scripts/list-conversations.py <export.zip> --sort hidden --min-hidden 1
-python3 scripts/list-conversations.py <export.zip> --json --limit 200
+python3 scripts/list-conversations.py <export.zip> --json --limit 50
 ```
 
 Use this to understand scale, find likely memory-heavy conversations, and decide whether broader archive review is even necessary.
@@ -166,7 +166,7 @@ python3 scripts/build-memory-preview.py /tmp/chatgpt-saved-memory.json
 python3 scripts/build-memory-preview.py /tmp/chatgpt-saved-memory.json --output /tmp/chatgpt-memory-preview.md
 ```
 
-This is the core “what ChatGPT appears to remember about you” step.
+This is the core "what ChatGPT appears to remember about you" step.
 
 **Note:** For users with simple ChatGPT profiles (e.g. just a name and one-liner), the preview mostly reformats what `extract-saved-memory.py` already showed. In those cases, skip the preview and go straight to writing memory. The preview is most valuable when the profile has contradictions, multiple historical versions, or a mix of durable and runtime context.
 
@@ -214,7 +214,7 @@ python3 scripts/render-range.py <export.zip> \
   --compact-nontext
 ```
 
-Use subagents on large archives, but keep their responsibilities separated (see "Working at scale with subagents" below).
+**Default to doing enrichment directly** — render a few high-signal conversations yourself using `--title-contains` to filter. Only use subagents when the archive is large enough to justify parallelism (200+ conversations), and always have a fallback plan for when they fail (see "Working at scale with subagents" below).
 
 #### Topic-based mining pattern
 

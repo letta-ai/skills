@@ -2,7 +2,7 @@
 
 ## Official export instructions
 
-If a user needs help obtaining their export, point them to OpenAI’s official help article:
+If a user needs help obtaining their export, point them to OpenAI's official help article:
 
 - <https://help.openai.com/en/articles/7260999-how-do-i-export-my-chatgpt-history-and-data>
 
