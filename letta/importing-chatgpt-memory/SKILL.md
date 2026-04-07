@@ -266,7 +266,7 @@ Some transcripts are genuinely useful as reference memory — deep technical dis
 - Put them in `reference/transcripts/` (not `system/`) so they don't pin to the context window
 - Prefer summarized versions over verbatim when the key facts can be distilled into a few paragraphs
 - Use verbatim only when fidelity matters (exact decisions, nuanced preferences, detailed technical context)
-- Cap at 3-5 transcripts unless the user explicitly asks for more
+- Scale with the archive: a user with 500 conversations might have 30-50 worth preserving. Don't impose an artificial cap — use judgment about signal density
 
 **Don't:**
 - Dump all rendered transcripts into the memory repo
