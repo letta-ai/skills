@@ -19,6 +19,7 @@ Use a hybrid posture:
 
 - write obvious, low-risk, high-confidence memory while reviewing
 - keep ambiguous, historical, sensitive, or broad imports proposal-first
+- keep memory structure valid while writing; do not create overlapping file/folder paths in `system/`
 
 1. List the archive.
 2. Extract hidden saved memory and editable-context blocks.
@@ -27,6 +28,19 @@ Use a hybrid posture:
 5. Render and review broader transcripts only if deeper enrichment is needed.
 6. Propose the uncertain or broad updates.
 7. Apply the rest only after review.
+8. Offer a `/doctor` pass at the end if the import wrote or reorganized memory files.
+
+## Safe write targets
+
+Preferred destinations during import:
+
+- `system/human.md` for compact, durable user context that should be visible every turn
+- `reference/chatgpt/import-YYYY-MM-DD.md` for import audit notes
+- `reference/chatgpt/work-and-technical-background.md` for historical or progressive work context
+- `reference/chatgpt/collaboration-preferences.md` for mined interaction patterns
+- `reference/chatgpt/transcripts/` for curated transcript exports
+
+Never create a sibling folder that overlaps an in-context file path such as `system/human.md` or `system/persona.md`.
 
 ## Intake questions
 
@@ -98,6 +112,8 @@ Hold for proposal/review when the fact is:
 - based mostly on assistant interpretation rather than user statements
 - too broad to safely pin without confirmation
 
+Also hold when the memory target is ambiguous and writing immediately risks a malformed memory layout.
+
 ## Good candidates for active Letta memory
 
 Import into active memory when the fact is:
@@ -168,6 +184,15 @@ Use lower confidence when a fact is:
 
 If you find contradictions, do not guess. Call them out and ask the user which version is current.
 
+Before pinning historical work context into active memory, do a retraction sweep for phrases like:
+- "not doing"
+- "no longer"
+- "forget that"
+- "remove from memory"
+- "don't assume"
+
+Prefer newer explicit corrections over older historical context.
+
 ## Parallel review guidance
 
 If the archive is large:
@@ -177,12 +202,14 @@ If the archive is large:
 - use cheap subagents for reading and synthesis
 - use `render-range.py` for batch preparation when helpful
 - merge only high-confidence candidates into the final proposal
+- when safe, let subagents write non-overlapping progressive-memory artifacts directly into the memory directory so the parent agent is not the only writer
 
 Concrete roles that work well:
 - **explicit memory reviewer** — hidden context, custom instructions, repeated saved-memory blocks
 - **work context reviewer** — projects, tech stack, workflows, team/org context
 - **personality reviewer** — tone, formatting, question-volume, proactivity, correction patterns
 - **broad miner** — additional high-confidence durable facts from a wider slice of the archive
+- **retraction reviewer** — explicit statements that older context is outdated or should be forgotten
 
 For a slick onboarding flow, the explicit-memory reviewer should usually run first and drive the first memory writes before broad miners start.
 

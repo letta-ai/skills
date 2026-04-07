@@ -39,6 +39,7 @@ It should **not**:
 - treat runtime context as durable memory
 - flatten historical context into always-visible memory by default
 - auto-store sensitive personal material without confirmation
+- write memory into a malformed MemFS structure
 
 ## Default posture
 
@@ -140,10 +141,10 @@ Run the saved-memory extractor before doing any large transcript review:
 
 ```bash
 python3 scripts/extract-saved-memory.py <export.zip>
-python3 scripts/extract-saved-memory.py <export.zip> --json | tee /tmp/chatgpt-saved-memory.json
+python3 scripts/extract-saved-memory.py <export.zip> --json --output /tmp/chatgpt-saved-memory.json
 ```
 
-Note: the script does not accept `--output`. Pipe through `tee` to save JSON while also viewing it.
+If you want to both view and save the JSON, run the command once with `--output` and then read the saved file.
 
 This script pulls the highest-signal onboarding inputs from the entire export:
 - `about_user_message`
@@ -177,6 +178,25 @@ If the agent already has populated memory blocks (e.g. from `/init` or a previou
 - Use `str_replace` to add new sections to existing blocks rather than rewriting them
 - If the existing memory already covers a topic (e.g. working style, project list), augment it — don't replace it
 - ChatGPT memory may be stale relative to what the agent already knows. Prefer existing memory for current facts; use ChatGPT data to fill gaps (background, preferences, historical context)
+
+### Safe write targets and memory structure
+
+Before writing memory, inspect `system/` and the relevant reference directories.
+
+Important MemFS rule:
+- **Never create overlapping file/folder paths** such as `system/human.md` and `system/human/...` or `system/persona.md` and `system/persona/...`.
+
+Preferred destinations:
+- `system/human.md` — condensed durable user facts and collaboration preferences that should be in-context every turn
+- `reference/chatgpt/import-YYYY-MM-DD.md` — import audit trail, exclusions, uncertainty notes, source path
+- `reference/chatgpt/work-and-technical-background.md` — historical or progressive work context
+- `reference/chatgpt/collaboration-preferences.md` — mined interaction/style patterns that do not all need to live in `system/`
+- `reference/chatgpt/transcripts/` — curated transcript exports for fidelity/auditability
+
+If `system/human.md` already exists, update that file instead of inventing a sibling folder.
+If `system/persona.md` already exists, update that file instead of inventing a sibling folder.
+
+Use progressive disclosure aggressively: keep active memory small, and link outward with `[[reference/chatgpt/...]]` paths so future agents can discover the archive.
 
 ### 4. Write obvious high-confidence memory while learning
 
@@ -231,6 +251,24 @@ python3 scripts/render-conversation.py <export.zip> --index 144
 
 For broader topic sweeps, try multiple `--title-contains` queries (e.g. "Julia", "Bayesian", "economics") and deduplicate by index before rendering.
 
+#### Stale-context / retraction sweep
+
+Before promoting historical findings to active memory, do a lightweight sweep for explicit corrections in later conversations.
+
+Use content search, not just title search:
+
+```bash
+python3 scripts/search-conversations.py <export.zip> --query "not doing" --query "no longer" --query "forget that" --query "remove from memory"
+python3 scripts/search-conversations.py <export.zip> --query "used to" --query "don't assume" --json --limit 20
+```
+
+Typical signals:
+- the user says a project is no longer active
+- the user says to forget or remove old context
+- the user says a role, employer, affiliation, or plan is outdated
+
+When old context conflicts with a newer explicit correction, prefer the newer correction.
+
 ### 6. Optional high-fidelity transcript export
 
 If the user wants maximum fidelity or future auditability, export selected transcripts.
@@ -263,10 +301,11 @@ Some transcripts are genuinely useful as reference memory — deep technical dis
 
 **Do:**
 - Store only transcripts that contain durable context not already captured in memory blocks
-- Put them in `reference/transcripts/` (not `system/`) so they don't pin to the context window
+- Put them in `reference/chatgpt/transcripts/` (not `system/`) so they don't pin to the context window
 - Prefer summarized versions over verbatim when the key facts can be distilled into a few paragraphs
 - Use verbatim only when fidelity matters (exact decisions, nuanced preferences, detailed technical context)
 - Scale with the archive: a user with 500 conversations might have 30-50 worth preserving. Don't impose an artificial cap — use judgment about signal density
+- Pair transcript exports with a small audit/import file explaining why they were preserved
 
 **Don't:**
 - Dump all rendered transcripts into the memory repo
@@ -331,11 +370,16 @@ Stop and confirm before storing:
 
 For larger exports (200+ conversations), use separate subagents for parallel mining. Each subagent should have a focused scope and explicit instructions on which scripts to use.
 
+If the scope is broad and the parent agent is becoming the bottleneck, parallelize more aggressively. It is often better to run 3-6 tightly scoped mining subagents than to funnel everything back through one synthesizer.
+
 ### Subagent design rules
 
 - **Give each subagent the full script paths** — they don't inherit your skill knowledge
 - **Limit scope to 10-15 rendered conversations per subagent** — more than that risks context overflow or timeouts
 - **Use `general-purpose` subagent type** — these subagents need to run scripts via Bash
+- **Partition output paths up front** — each writing subagent should own a non-overlapping destination such as `reference/chatgpt/work-and-technical-background.md`, `reference/chatgpt/collaboration-preferences.md`, or a transcript subdirectory
+- **Allow direct progressive-memory writes when safe** — subagents can write audit files, reference summaries, and curated transcript exports directly into the memory directory if the paths are clearly partitioned
+- **Keep active-memory writes coordinated** — unless a subagent has an explicitly assigned, non-overlapping target, have the parent agent merge final high-confidence facts into `system/human.md` / `system/persona.md`
 - **Always provide a fallback plan** — if a subagent fails, do the mining directly using `list-conversations.py --title-contains` followed by targeted `render-conversation.py` calls
 
 ### Recommended mining passes
@@ -346,6 +390,7 @@ Split into topic-focused subagents:
 2. **Technical background** — languages, frameworks, tools, research topics
 3. **Personal context** — hobbies, relationships, life events (handle sensitively)
 4. **Collaboration preferences** — how they like to interact with AI, formatting preferences, pet peeves
+5. **Retraction / stale-context pass** — explicit corrections, outdated affiliations, projects the user says to forget
 
 ### Subagent prompt template
 
@@ -356,8 +401,11 @@ You're mining a ChatGPT export for [TOPIC] context. The export is at:
 Step 1: Find relevant conversations:
 python3 scripts/list-conversations.py "[EXPORT_PATH]" --title-contains "[KEYWORD]" --json
 
+# Optional: search message contents directly for corrections or buried context
+python3 scripts/search-conversations.py "[EXPORT_PATH]" --query "[KEYWORD]" --json
+
 Step 2: Render the top 5-10 most relevant conversations:
-python3 scripts/render-conversation.py "[EXPORT_PATH]" --index [N]
+python3 scripts/render-conversation.py "[EXPORT_PATH]" --index [N] --skip-thoughts --skip-empty-tool-messages
 
 Extract and return:
 - [SPECIFIC QUESTION 1]
@@ -399,6 +447,10 @@ It extracts and deduplicates:
 
 It also reports first/last seen timestamps and source samples.
 
+Supports:
+- `--json`
+- `--output`
+
 ### `scripts/build-memory-preview.py`
 
 Use to build the Letta-oriented preview.
@@ -413,9 +465,27 @@ It separates:
 
 Use for deep review of one conversation.
 
+Useful mining flags:
+- `--skip-thoughts`
+- `--skip-empty-tool-messages`
+- `--user-only`
+- `--assistant-only`
+
 ### `scripts/render-range.py`
 
 Use for batch transcript rendering during archive enrichment.
+
+Also supports the same noise-reduction flags as `render-conversation.py`.
+
+### `scripts/search-conversations.py`
+
+Use when title search is not enough.
+
+Good fits:
+- stale-context / retraction sweeps
+- finding buried project mentions inside generic titles
+- locating "forget this" / "not doing this anymore" corrections
+- searching for specific phrases before choosing which conversations to render
 
 ### `scripts/export-transcripts.py`
 
@@ -436,6 +506,7 @@ At the end of a run, report back in this order:
 3. **What was preserved as historical/progressive memory**
 4. **What was excluded and why**
 5. **What still needs confirmation**
+6. **Whether the user wants a `/doctor` pass to validate the resulting memory structure and prompt hygiene**
 
 ## References
 

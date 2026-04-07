@@ -193,7 +193,44 @@ def message_has_displayable_content(message: dict, *, compact_nontext: bool) -> 
     return has_content, content
 
 
-def render_markdown(row: dict, *, skip_empty_hidden: bool, compact_nontext: bool) -> str:
+def should_render_message(
+    message: dict,
+    *,
+    role: str,
+    has_content: bool,
+    skip_empty_hidden: bool,
+    hidden: bool,
+    skip_empty_tool_messages: bool,
+    skip_thoughts: bool,
+    user_only: bool,
+    assistant_only: bool,
+) -> bool:
+    if user_only and role != "user":
+        return False
+    if assistant_only and role != "assistant":
+        return False
+    if skip_empty_hidden and hidden and not has_content:
+        return False
+    if skip_empty_tool_messages and role == "tool" and not has_content:
+        return False
+
+    content = message.get("content") or {}
+    if skip_thoughts and isinstance(content, dict) and content.get("content_type") == "thoughts":
+        return False
+
+    return True
+
+
+def render_markdown(
+    row: dict,
+    *,
+    skip_empty_hidden: bool,
+    compact_nontext: bool,
+    skip_empty_tool_messages: bool,
+    skip_thoughts: bool,
+    user_only: bool,
+    assistant_only: bool,
+) -> str:
     conversation = row["conversation"]
     lines: list[str] = []
     title = conversation.get("title") or "(untitled)"
@@ -227,7 +264,17 @@ def render_markdown(row: dict, *, skip_empty_hidden: bool, compact_nontext: bool
         has_content, content = message_has_displayable_content(message, compact_nontext=compact_nontext)
         user_context = metadata.get("user_context_message_data")
 
-        if skip_empty_hidden and hidden and not has_content:
+        if not should_render_message(
+            message,
+            role=role,
+            has_content=has_content,
+            skip_empty_hidden=skip_empty_hidden,
+            hidden=hidden,
+            skip_empty_tool_messages=skip_empty_tool_messages,
+            skip_thoughts=skip_thoughts,
+            user_only=user_only,
+            assistant_only=assistant_only,
+        ):
             continue
 
         rendered_count += 1
@@ -282,6 +329,19 @@ def main() -> None:
         action="store_true",
         help="Compact bulky non-text payloads such as attachment metadata",
     )
+    parser.add_argument(
+        "--skip-empty-tool-messages",
+        action="store_true",
+        help="Drop tool messages whose rendered content is empty",
+    )
+    parser.add_argument(
+        "--skip-thoughts",
+        action="store_true",
+        help="Drop messages whose content_type is 'thoughts'",
+    )
+    role_filter = parser.add_mutually_exclusive_group()
+    role_filter.add_argument("--user-only", action="store_true", help="Render only user messages")
+    role_filter.add_argument("--assistant-only", action="store_true", help="Render only assistant messages")
     parser.add_argument("--output", help="Write markdown to this file instead of stdout")
     args = parser.parse_args()
 
@@ -296,6 +356,10 @@ def main() -> None:
             row,
             skip_empty_hidden=args.skip_empty_hidden,
             compact_nontext=args.compact_nontext,
+            skip_empty_tool_messages=args.skip_empty_tool_messages,
+            skip_thoughts=args.skip_thoughts,
+            user_only=args.user_only,
+            assistant_only=args.assistant_only,
         )
 
     if args.output:

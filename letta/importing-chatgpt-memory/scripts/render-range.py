@@ -19,12 +19,24 @@ def build_base_command(
     *,
     skip_empty_hidden: bool,
     compact_nontext: bool,
+    skip_empty_tool_messages: bool,
+    skip_thoughts: bool,
+    user_only: bool,
+    assistant_only: bool,
 ) -> list[str]:
     command = [sys.executable, str(render_script), str(zip_path)]
     if skip_empty_hidden:
         command.append("--skip-empty-hidden")
     if compact_nontext:
         command.append("--compact-nontext")
+    if skip_empty_tool_messages:
+        command.append("--skip-empty-tool-messages")
+    if skip_thoughts:
+        command.append("--skip-thoughts")
+    if user_only:
+        command.append("--user-only")
+    if assistant_only:
+        command.append("--assistant-only")
     return command
 
 
@@ -43,6 +55,19 @@ def main() -> None:
         action="store_true",
         help="Compact bulky non-text payloads such as attachment metadata",
     )
+    parser.add_argument(
+        "--skip-empty-tool-messages",
+        action="store_true",
+        help="Drop tool messages whose rendered content is empty",
+    )
+    parser.add_argument(
+        "--skip-thoughts",
+        action="store_true",
+        help="Drop messages whose content_type is 'thoughts'",
+    )
+    role_filter = parser.add_mutually_exclusive_group()
+    role_filter.add_argument("--user-only", action="store_true", help="Render only user messages")
+    role_filter.add_argument("--assistant-only", action="store_true", help="Render only assistant messages")
 
     output_group = parser.add_mutually_exclusive_group(required=True)
     output_group.add_argument("--output-dir", help="Directory for one markdown file per conversation")
@@ -62,6 +87,10 @@ def main() -> None:
         zip_path,
         skip_empty_hidden=args.skip_empty_hidden,
         compact_nontext=args.compact_nontext,
+        skip_empty_tool_messages=args.skip_empty_tool_messages,
+        skip_thoughts=args.skip_thoughts,
+        user_only=args.user_only,
+        assistant_only=args.assistant_only,
     )
 
     if args.output_dir:
