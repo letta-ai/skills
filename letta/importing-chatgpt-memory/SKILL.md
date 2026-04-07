@@ -257,6 +257,22 @@ python3 scripts/export-transcripts.py <export.zip> \
 
 Transcript export should be treated as an **optional archival feature**, not the default onboarding path.
 
+### Storing transcripts in the memory repo
+
+Some transcripts are genuinely useful as reference memory — deep technical discussions, project planning sessions, or conversations where the user stated specific preferences in detail. The key is selectivity.
+
+**Do:**
+- Store only transcripts that contain durable context not already captured in memory blocks
+- Put them in `reference/transcripts/` (not `system/`) so they don't pin to the context window
+- Prefer summarized versions over verbatim when the key facts can be distilled into a few paragraphs
+- Use verbatim only when fidelity matters (exact decisions, nuanced preferences, detailed technical context)
+- Cap at 3-5 transcripts unless the user explicitly asks for more
+
+**Don't:**
+- Dump all rendered transcripts into the memory repo
+- Store transcripts in `system/` where they'd consume context window space
+- Store transcripts that are redundant with what's already in active memory blocks
+
 ## Hidden context to watch for
 
 Recent ChatGPT exports often contain the clearest explicit memory in hidden system/context messages.
