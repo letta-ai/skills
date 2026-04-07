@@ -319,7 +319,7 @@ For larger exports (200+ conversations), use separate subagents for parallel min
 
 - **Give each subagent the full script paths** — they don't inherit your skill knowledge
 - **Limit scope to 10-15 rendered conversations per subagent** — more than that risks context overflow or timeouts
-- **Use `explore` subagent type** — these are read-only tasks
+- **Use `general-purpose` subagent type** — these subagents need to run scripts via Bash
 - **Always provide a fallback plan** — if a subagent fails, do the mining directly using `list-conversations.py --title-contains` followed by targeted `render-conversation.py` calls
 
 ### Recommended mining passes
