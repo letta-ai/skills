@@ -108,16 +108,34 @@ Also do **not** respond by teaching the user how they should have phrased the re
 
 This import can take multiple minutes for large archives. **Never let the user sit in silence.** The import should feel like a guided, living process.
 
+### Record the starting commit
+
+Before writing any memory, record the current HEAD of the memory repo:
+
+```bash
+git -C "$MEMORY_DIR" log --oneline -1
+```
+
+Save this commit hash — it's the rollback point. If anything goes wrong or the user wants to undo the import, they can reset to this commit:
+
+```bash
+git -C "$MEMORY_DIR" reset --hard <start-commit>
+git -C "$MEMORY_DIR" push --force
+```
+
+Include both the start and end commit hashes in the import audit file and in the final summary. Tell the user explicitly: "If you want to undo any of this, I can reset your memory to where it was before the import."
+
 ### Use TodoWrite for phases
 
 Create a todo list at the start of the import and update it as you go:
 
-1. Locate export and run inventory
-2. Extract and preview saved memory
-3. Write active memory (`system/human.md`)
-4. Write import audit + progressive memory (`reference/chatgpt/`)
-5. Archive enrichment (if scoped)
-6. Validate with /doctor
+1. Record starting commit
+2. Locate export and run inventory
+3. Extract and preview saved memory
+4. Write active memory (`system/human.md`)
+5. Write import audit + progressive memory (`reference/chatgpt/`)
+6. Archive enrichment (if scoped)
+7. Validate with /doctor
 
 Mark each phase `in_progress` before starting and `completed` when done.
 
@@ -672,8 +690,9 @@ Then follow with the structured breakdown:
 5. **What was excluded and why**
 6. **What still needs confirmation**
 7. **Results of the /doctor validation**
+8. **Rollback info** — start commit, end commit, and how to undo: "If you want to undo the import, I can reset your memory to `<start-commit>`."
 
-The snapshot is the part the user actually reads. The rest is for auditability.
+The snapshot is the part the user actually reads. The rollback info is the safety net.
 
 ## Export structure reference
 
