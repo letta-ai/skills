@@ -537,6 +537,7 @@ For archives of **50+ conversations**, use chunk-based parallel mining instead o
 - **Partition output paths up front** — each subagent owns a non-overlapping destination
 - **Allow direct progressive-memory writes** — subagents write to `reference/chatgpt/mining/chunk-NNN.md` and `reference/chatgpt/transcripts/` directly
 - **Keep active-memory writes coordinated** — only the primary agent merges into `system/human.md` / `system/persona.md`
+- **Subagents must not modify existing memory files** — they create new files only (`reference/chatgpt/mining/chunk-NNN.md`, `reference/chatgpt/transcripts/NNN-slug.md`). They must never read, edit, or overwrite anything in `system/` or any pre-existing file in `reference/`
 - **Always provide a fallback plan** — if a subagent fails, mine its chunk directly using `list-conversations.py --title-contains` followed by targeted `render-conversation.py` calls
 
 ### Subagent prompt template
@@ -556,6 +557,8 @@ Write findings to [MEMORY_DIR]/reference/chatgpt/mining/chunk-[NNN].md with sect
 - Retractions (older context the user said to forget)
 
 High-signal conversations (career transitions, deep technical design, detailed project context, explicit preference discussions) → summarize into [MEMORY_DIR]/reference/chatgpt/transcripts/NNN-title-slug.md. Do this during mining, not after. Use 2-5 paragraph summaries, not verbatim transcripts. Include frontmatter with a description.
+
+IMPORTANT: Only create NEW files. Do not read, edit, or overwrite any existing files in the memory directory. Do not touch system/.
 ```
 
 ### When subagents fail
