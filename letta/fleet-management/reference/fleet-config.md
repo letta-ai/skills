@@ -5,69 +5,139 @@ Complete YAML schema for lettactl fleet configuration.
 ## Top-Level Structure
 
 ```yaml
-shared_blocks: []      # Optional: blocks shared across agents
-tools: []              # Optional: tool definitions
-mcp_servers: []        # Optional: MCP server configs
-agents: []             # Required: agent definitions
-```
-
-## Shared Blocks
-
-```yaml
-shared_blocks:
-  - name: block-name           # Required: unique identifier
-    description: Description   # Required: block purpose
-    limit: 5000                # Required: max characters
-    value: "Inline content"    # Option 1: inline value
-    from_file: ./path.md       # Option 2: local file
-    from_bucket:               # Option 3: Supabase storage
-      bucket: bucket-name
-      path: file/path.md
+root_path: ./my-fleet     # Optional: base dir for relative paths
+shared_blocks: []          # Optional: blocks shared across agents
+shared_folders: []         # Optional: folders shared across agents
+mcp_servers: []            # Optional: MCP server configs
+agents: []                 # Required: agent definitions
 ```
 
 ## Agent Definition
 
 ```yaml
 agents:
-  - name: agent-name                    # Required: unique name
-    description: Agent description      # Optional
+  - name: agent-name                    # Required: unique name ([a-zA-Z0-9_-]+)
+    description: Agent description      # Required
 
     system_prompt:                      # Required
       value: "Inline prompt"            # Option 1
       from_file: ./prompt.md            # Option 2
       from_bucket:                      # Option 3
+        provider: supabase
         bucket: prompts
         path: agent/system.md
+      disable_base_prompt: false        # Skip Letta base instructions
 
-    llm_config:                         # Optional
-      model: gpt-4o                     # Model name
-      context_window: 128000            # Context size
+    llm_config:                         # Required
+      model: google_ai/gemini-2.5-pro   # provider/model-name format
+      context_window: 128000            # 1,000 - 200,000
+      max_tokens: 4096                  # Optional: max output tokens
 
-    embedding: text-embedding-3-small   # Required for self-hosted, optional for Cloud
+    embedding: openai/text-embedding-3-small  # Optional (default)
+    embedding_config: {}                      # Optional: additional settings
+    reasoning: true                           # Optional: chain-of-thought (default: true)
+    first_message: "Boot message"             # Optional: sent on first creation only
 
+    tags: []                            # Optional: key:value strings for filtering
     memory_blocks: []                   # Optional: agent-specific blocks
+    archives: []                        # Optional: vector-searchable memory (max 1)
     shared_blocks: []                   # Optional: references to shared_blocks
-    tools: []                           # Optional: tool names
-    folders: []                         # Optional: file folders
+    shared_folders: []                  # Optional: references to shared_folders
+    folders: []                         # Optional: file folders for RAG
+    tools: []                           # Optional: tool names, objects, or globs
+    mcp_tools: []                       # Optional: tools from MCP servers
 ```
 
 ## Memory Blocks
 
-Agent-specific memory blocks:
+Agent-specific memory blocks with ownership semantics:
 
 ```yaml
 memory_blocks:
-  - name: persona                 # Required
-    description: Agent persona    # Required
-    limit: 2000                   # Required
-    value: "Content here"         # Option 1: inline
-    from_file: ./persona.md       # Option 2: file
-    from_bucket:                  # Option 3: bucket
-      bucket: memory
-      path: personas/support.md
+  # Agent can modify this block — YAML won't overwrite on apply
+  - name: user_preferences
+    description: "What I know about the user"
+    limit: 5000
+    value: "No preferences yet."
+    agent_owned: true
+
+  # YAML controls this block — syncs on every apply
+  - name: brand_guidelines
+    description: "Brand voice and identity"
+    limit: 3000
+    from_file: "brand/guidelines.md"
+    agent_owned: false
+    version: "2.1.0"
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Required. Unique within agent. |
+| `description` | string | Required. Human-readable purpose. |
+| `limit` | integer | Required. Max characters. |
+| `agent_owned` | boolean | Required. `true`: agent writes, YAML won't overwrite. `false`: YAML syncs on every apply. |
+| `value` / `from_file` / `from_bucket` | string | Content source. Exactly one required. |
+| `version` | string | Optional. User-defined version tag. |
+
+## Shared Blocks
+
+```yaml
+shared_blocks:
+  - name: company-knowledge
+    description: Company policies and procedures
+    limit: 10000
+    from_file: ./context/company.md
+    version: "2.0.0"
+```
+
+Define at root level, attach by name in agents via `shared_blocks: [name]`.
+
+## Shared Folders
+
+```yaml
+shared_folders:
+  - name: brand_assets
+    files:
+      - "brand/*.md"
+      - from_bucket:
+          provider: supabase
+          bucket: assets
+          path: "brand/*.pdf"
+```
+
+Define at root level, attach by name in agents via `shared_folders: [name]`.
+
+## Archives
+
+Vector-searchable long-term memory. Max one per agent.
+
+```yaml
+archives:
+  - name: knowledge_base
+    description: "Long-term knowledge storage"
+    embedding: "openai/text-embedding-3-small"
 ```
 
 ## Tools
+
+Reference built-in tools by name, custom tools by path, or auto-discover from a directory:
+
+```yaml
+tools:
+  # Built-in by name
+  - archival_memory_insert
+  - archival_memory_search
+
+  # Custom tool from cloud storage
+  - name: "web_search"
+    from_bucket:
+      provider: supabase
+      bucket: tools
+      path: "web_search.py"
+
+  # Auto-discover all .py files in tools/ directory
+  - "tools/*"
+```
 
 ### Inline Tool Definition
 
@@ -81,63 +151,101 @@ tools:
           return f"Results for: {query}"
 ```
 
-### File-Based Tool
-
-```yaml
-tools:
-  - name: send_email
-    from_file: ./tools/send_email.py
-```
-
-### Referencing Tools in Agents
-
-```yaml
-agents:
-  - name: my-agent
-    tools:
-      - search_docs      # Reference by name
-      - send_email
-```
-
 ## MCP Servers
 
 ```yaml
 mcp_servers:
-  - name: github-server
+  # SSE server with auth
+  - name: firecrawl
     type: sse
-    url: http://localhost:3000/sse
+    server_url: "https://sse.firecrawl.dev"
+    auth_header: "Authorization"
+    auth_token: "Bearer ${FIRECRAWL_API_KEY}"
 
-  - name: local-tools
+  # Stdio server
+  - name: filesystem
     type: stdio
     command: npx
-    args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
+    args: ["-y", "@anthropic/mcp-server-filesystem", "/tmp"]
+    env:
+      NODE_ENV: production
+
+  # Streamable HTTP
+  - name: custom-api
+    type: streamable_http
+    server_url: "https://api.example.com/mcp"
+    custom_headers:
+      X-Api-Version: "2"
 ```
 
-## Folders
+Types: `sse`, `stdio`, `streamable_http`. Auth fields: `auth_header`, `auth_token`, `custom_headers`.
 
-Attach file folders to agents for RAG:
+## MCP Tool Selection
+
+Select which tools from an MCP server an agent can use:
+
+```yaml
+mcp_tools:
+  - server: firecrawl
+    tools: ["scrape", "crawl"]    # Specific tools only
+  - server: filesystem             # All tools (default)
+```
+
+## Tags
+
+Tags enable multi-tenancy and filtering. Format: `key:value`.
 
 ```yaml
 agents:
-  - name: docs-agent
-    folders:
-      - name: documentation
-        files:
-          - ./docs/guide.md
-          - ./docs/api.md
-          - ./docs/**/*.md    # Glob patterns supported
+  - name: support-agent
+    tags:
+      - "tenant:acme-corp"
+      - "role:support"
+      - "env:production"
 ```
+
+```bash
+lettactl get agents --tags "tenant:acme-corp"
+lettactl send --tags "role:support,env:production" "Update"
+```
+
+Tags use AND logic — all specified tags must match.
+
+## Folders
+
+File collections for RAG. Supports local files, globs, and cloud storage:
+
+```yaml
+folders:
+  - name: documentation
+    files:
+      - "docs/guide.md"
+      - "docs/*.txt"
+      - "knowledge/**/*.md"
+      - from_bucket:
+          provider: supabase
+          bucket: my-bucket
+          path: "docs/*.pdf"
+```
+
+## FromBucket (Cloud Storage)
+
+```yaml
+from_bucket:
+  provider: supabase       # Currently only supabase
+  bucket: bucket-name
+  path: file/path.md       # Supports glob patterns
+```
+
+Used by: system prompts, memory blocks, shared blocks, folders, tools.
 
 ## File Source Priority
 
-When multiple sources specified, priority is:
-1. `from_bucket` (Supabase storage)
-2. `from_file` (local filesystem)
-3. `value` (inline content)
+When multiple sources specified: `from_bucket` > `from_file` > `value`.
 
 ## Variable Interpolation
 
-Environment variables can be used:
+Environment variables are expanded:
 
 ```yaml
 agents:
@@ -146,45 +254,23 @@ agents:
       model: ${MODEL_NAME}
 ```
 
-## Complete Example
+## Defaults
 
-```yaml
-shared_blocks:
-  - name: company-knowledge
-    description: Company policies and procedures
-    limit: 10000
-    from_file: ./context/company.md
+| Field | Default |
+|-------|---------|
+| `model` | `google_ai/gemini-2.5-pro` |
+| `context_window` | `28000` |
+| `embedding` | `openai/text-embedding-3-small` |
+| `reasoning` | `true` |
+| `disable_base_prompt` | `false` |
 
-tools:
-  - name: lookup_customer
-    from_file: ./tools/lookup_customer.py
+## Validation Rules
 
-mcp_servers:
-  - name: slack-server
-    type: sse
-    url: http://localhost:3001/sse
-
-agents:
-  - name: support-agent
-    description: Customer support assistant
-    system_prompt:
-      from_file: ./prompts/support.md
-    llm_config:
-      model: gpt-4o
-      context_window: 128000
-    memory_blocks:
-      - name: persona
-        description: Agent personality traits
-        limit: 2000
-        value: |
-          You are a friendly, professional support agent.
-          Always be helpful and concise.
-    shared_blocks:
-      - company-knowledge
-    tools:
-      - lookup_customer
-    folders:
-      - name: faq
-        files:
-          - ./faq/*.md
-```
+- Unique agent names (`[a-zA-Z0-9_-]+`)
+- Reserved names: `agents`, `blocks`, `archives`, `tools`, `folders`, `files`, `mcp-servers`, `archival`
+- Unique block names within an agent
+- Max 1 archive per agent
+- Single content source per prompt/block (`value`, `from_file`, or `from_bucket`)
+- Context window: 1,000–200,000
+- Tags: no commas, non-empty strings
+- Strict validation — unknown fields rejected

@@ -1,0 +1,8 @@
+{
+  "name": "ai-news-scripts",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "dependencies": {
+    "youtube-transcript": "^1.2.1"
+  }
+}

@@ -18,8 +18,6 @@ Apply fleet configuration to create or update agents.
 lettactl apply -f <file>
 ```
 
-### Options
-
 | Option | Description |
 |--------|-------------|
 | `-f, --file <path>` | Path to fleet YAML file (required) |
@@ -27,21 +25,29 @@ lettactl apply -f <file>
 | `--agent <pattern>` | Filter agents by name pattern |
 | `--match <pattern>` | Template mode: apply to existing agents matching pattern |
 | `--root <path>` | Root path for resolving relative file paths |
+| `--manifest` | Write JSON manifest with resource IDs |
+| `--canary` | Deploy isolated canary copies (CANARY- prefix) |
+| `--canary-prefix <str>` | Custom canary prefix (default: CANARY-) |
+| `--promote` | Promote canary config to production agents |
+| `--cleanup` | Remove canary agents |
+| `--recalibrate` | Re-send calibration messages to changed agents |
+| `--recalibrate-message <msg>` | Custom calibration message |
+| `--recalibrate-tags <tags>` | Scope recalibration by tags (AND logic) |
+| `--recalibrate-match <pattern>` | Scope recalibration by glob pattern |
+| `--no-wait` | Fire-and-forget recalibration |
+| `--skip-first-message` | Skip first_message on creation |
 
 ### Examples
 
 ```bash
-# Apply all agents
 lettactl apply -f fleet.yaml
-
-# Preview changes
 lettactl apply -f fleet.yaml --dry-run
-
-# Apply specific agent
 lettactl apply -f fleet.yaml --agent support-agent
-
-# Template mode: update existing agents
-lettactl apply -f template.yaml --match "*-draper"
+lettactl apply -f fleet.yaml --match "*-draper"
+lettactl apply -f fleet.yaml --canary
+lettactl apply -f fleet.yaml --promote
+lettactl apply -f fleet.yaml --cleanup
+lettactl apply -f fleet.yaml --recalibrate --recalibrate-tags "role:support"
 ```
 
 ## get
@@ -68,22 +74,19 @@ lettactl get <resource>
 | `--agent <name>` | Filter by agent (for blocks, tools, folders) |
 | `--shared` | Show only shared resources (2+ agents) |
 | `--orphaned` | Show only orphaned resources (0 agents) |
+| `--tags <tags>` | Filter by tags (AND logic) |
+| `--canary` | Show only canary agents |
+| `--query <text>` | Semantic search in archival memory |
 
 ### Examples
 
 ```bash
-# List agents
 lettactl get agents
 lettactl get agents -o wide
-lettactl get agents -o json
-
-# List blocks for specific agent
+lettactl get agents --tags "tenant:acme-corp"
+lettactl get agents --tags "role:support,env:production"
 lettactl get blocks --agent my-agent
-
-# Find orphaned tools
 lettactl get tools --orphaned
-
-# Find shared blocks
 lettactl get blocks --shared
 ```
 
@@ -95,13 +98,11 @@ Show detailed information about a resource.
 lettactl describe <resource> <name>
 ```
 
-### Resources
+Resources: `agent`, `block`, `tool`.
 
-- `agent` - Agent details
-- `block` - Block details
-- `tool` - Tool details
-
-### Examples
+| Option | Description |
+|--------|-------------|
+| `--canary` | Describe canary version |
 
 ```bash
 lettactl describe agent support-agent
@@ -111,32 +112,42 @@ lettactl describe tool send_email
 
 ## send
 
-Send a message to an agent.
+Send a message to an agent or multiple agents.
 
 ```bash
 lettactl send <agent> <message>
 ```
 
-### Options
+### Single Agent Options
 
 | Option | Description |
 |--------|-------------|
 | `--stream` | Stream the response |
+| `--sync` | Synchronous mode (wait for response) |
 | `--async` | Send asynchronously (returns run ID) |
 | `--max-steps <n>` | Maximum agent steps |
 | `--enable-thinking` | Enable thinking mode |
+| `--timeout <s>` | Per-agent timeout (default: 60s) |
+
+### Bulk Messaging Options
+
+| Option | Description |
+|--------|-------------|
+| `--all <pattern>` | Send to agents matching glob pattern |
+| `--tags <tags>` | Send to agents matching tags (AND logic) |
+| `-f <file>` | Target agents defined in a config file |
+| `--confirm` | Skip confirmation prompt |
+| `--no-wait` | Fire-and-forget mode |
 
 ### Examples
 
 ```bash
-# Simple message
 lettactl send my-agent "Hello, how are you?"
-
-# Stream response
-lettactl send my-agent "Explain quantum computing" --stream
-
-# Async (returns immediately)
-lettactl send my-agent "Process this data" --async
+lettactl send my-agent "Explain this" --stream
+lettactl send my-agent "Process data" --async
+lettactl send --all "support-*" "New policy update"
+lettactl send --tags "tenant:acme,role:support" "Policy change"
+lettactl send -f fleet.yaml "System check"
 ```
 
 ## messages
@@ -159,8 +170,6 @@ lettactl messages list <agent>
 
 ### reset
 
-Clear agent message history.
-
 ```bash
 lettactl messages reset <agent>
 lettactl messages reset <agent> --add-default  # Keep default messages
@@ -168,19 +177,93 @@ lettactl messages reset <agent> --add-default  # Keep default messages
 
 ### compact
 
-Compact/summarize message history.
-
 ```bash
 lettactl messages compact <agent>
 ```
 
 ### cancel
 
-Cancel running async messages.
-
 ```bash
 lettactl messages cancel <agent>
 lettactl messages cancel <agent> --run-ids id1,id2
+```
+
+## export
+
+Export agents to YAML or JSON.
+
+### Single Agent
+
+```bash
+lettactl export agent <name>
+```
+
+| Option | Description |
+|--------|-------------|
+| `-f, --format <fmt>` | `yaml` (default) or `json` |
+| `--legacy-format` | v1 export compatibility |
+| `--skip-first-message` | Omit first_message from export |
+| `--max-steps <n>` | Limit exported processing steps |
+
+### Bulk Export
+
+```bash
+lettactl export agents --all
+lettactl export agents --match "support-*"
+lettactl export agents --tags "tenant:acme"
+```
+
+### LettaBot Export
+
+```bash
+lettactl export lettabot <agent>        # Single agent lettabot.yaml
+lettactl export lettabot --all          # All agents with lettabot configs
+lettactl export lettabot --match "*"    # By pattern
+lettactl export lettabot --tags "role:chat"  # By tags
+```
+
+## import
+
+Import an agent from an exported file.
+
+```bash
+lettactl import <file>
+```
+
+| Option | Description |
+|--------|-------------|
+| `--name <name>` | Override agent name |
+| `--append-copy` | Add '_copy' suffix to name |
+| `--embedding <model>` | Override embedding model |
+| `--override-tools` | Overwrite existing tool source code |
+| `--strip-messages` | Remove message history |
+| `--secrets <json>` | Inject secrets as JSON |
+| `--env-vars <json>` | Inject environment variables |
+
+```bash
+lettactl import agent-export.yaml
+lettactl import agent-export.json --name new-agent --strip-messages
+```
+
+## report
+
+Fleet-wide reporting and analysis.
+
+### memory
+
+```bash
+lettactl report memory
+```
+
+| Option | Description |
+|--------|-------------|
+| `--analyze` | LLM-powered deep memory analysis |
+| `--confirm` | Skip confirmation for bulk analysis |
+| `-o json` | JSON output |
+
+```bash
+lettactl report memory                  # Usage stats
+lettactl report memory --analyze        # Deep analysis with LLM
 ```
 
 ## delete
@@ -191,18 +274,44 @@ Delete resources.
 lettactl delete <resource> <name>
 ```
 
-### Resources
-
-- `agent` - Delete agent
-- `block` - Delete block
-- `tool` - Delete tool
-
-### Examples
+Resources: `agent`, `block`, `tool`.
 
 ```bash
 lettactl delete agent old-agent
 lettactl delete block unused-block
 lettactl delete tool deprecated-tool
+```
+
+## delete-all
+
+Bulk delete with pattern matching.
+
+```bash
+lettactl delete-all --pattern "CANARY-.*"
+lettactl delete-all --pattern "test-.*" --force  # Actually delete
+```
+
+## create / update
+
+Create or update agents from CLI flags.
+
+```bash
+lettactl create agent --name my-agent --model openai/gpt-4o
+lettactl update agent my-agent --model google_ai/gemini-2.5-pro
+```
+
+## Utility Commands
+
+```bash
+lettactl health                    # Health check (supports -o json)
+lettactl context <agent>           # Show context window token usage
+lettactl files <agent>             # Show file attachment state
+lettactl runs                      # List async job runs
+lettactl run <run-id>              # Get run details
+lettactl run-delete <run-id>       # Cancel async run
+lettactl cleanup                   # Remove orphaned resources
+lettactl validate -f fleet.yaml    # Validate config without applying
+lettactl completion <shell>        # Shell completion (bash/zsh/fish)
 ```
 
 ## Environment Variables
@@ -214,3 +323,6 @@ lettactl delete tool deprecated-tool
 | `SUPABASE_URL` | Supabase URL for bucket storage |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
 | `SUPABASE_ANON_KEY` | Supabase anonymous key |
+| `LETTA_USE_TPUF` | Enable Turbopuffer for semantic conversation search |
+| `LETTA_TPUF_API_KEY` | Turbopuffer API key |
+| `LETTA_EMBED_ALL_MESSAGES` | Embed all messages for semantic search |

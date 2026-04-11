@@ -54,6 +54,7 @@ Skills are organized into practical, flat categories:
 ```
 letta/                   # Letta product ecosystem
 ├── agent-development/   # Agent design and architecture
+├── importing-chatgpt-memory/ # Review ChatGPT exports before writing Letta memory
 ├── letta-api-client/    # Building apps with Letta SDK (Python/TypeScript)
 ├── letta-configuration/ # Model and provider configuration
 ├── benchmarks/          # Testing and benchmarking agents
@@ -82,6 +83,7 @@ meta/                    # Skills about the skill system
 ### Letta
 
 - **agent-development** - Comprehensive guide for designing and building Letta agents (architecture selection, memory design, model selection, tool configuration)
+- **importing-chatgpt-memory** - Reviewing ChatGPT exports by rendering conversations into readable markdown before importing durable memory into Letta
 - **letta-api-client** - Building applications with the Letta API using the Python and TypeScript SDKs (agents, tools, memory, multi-user patterns)
 - **letta-configuration** - Configure LLM models and providers for Letta agents and servers
 - **benchmarks** - Testing and benchmarking Letta agents
