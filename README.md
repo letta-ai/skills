@@ -54,26 +54,49 @@ Skills are organized into practical, flat categories:
 ```
 letta/                   # Letta product ecosystem
 ├── agent-development/   # Agent design and architecture
-├── importing-chatgpt-memory/ # Review ChatGPT exports before writing Letta memory
-├── letta-api-client/    # Building apps with Letta SDK (Python/TypeScript)
-├── letta-configuration/ # Model and provider configuration
-├── benchmarks/          # Testing and benchmarking agents
 ├── conversations/       # Conversation management
 ├── fleet-management/    # Managing multiple agents
-└── learning-sdk/        # Learning SDK integration
+├── importing-chatgpt-memory/ # Review ChatGPT exports before writing Letta memory
+├── letta-api-client/    # Building apps with Letta SDK (Python/TypeScript)
+└── letta-configuration/ # Model and provider configuration
 
-tools/                   # General tool integrations
-├── extracting-pdf-text/ # PDF text extraction
-├── google-workspace/    # Gmail and Google Calendar integration
-├── imessage/            # iMessage integration
-├── linear/              # Linear issue tracking
-├── mcp-builder/         # MCP server creation
-├── slack/               # Slack integration
-├── webapp-testing/      # Web app testing with Playwright
-└── yelp-search/         # Yelp search integration
+tools/                       # General tool integrations
+├── 1password/               # 1Password CLI integration
+├── ai-news/                 # AI news digest from RSS and YouTube
+├── datadog/                 # Datadog monitoring and logging
+├── discord/                 # Discord automation CLI
+├── doc/                     # Word document creation and editing
+├── figma/                   # Figma API integration
+├── figma-implement-design/  # Implement Figma designs as code
+├── frontend-skill/          # Frontend development patterns
+├── github/                  # GitHub API integration
+├── gog/                     # GOG.com games integration
+├── google-workspace/        # Gmail and Google Calendar integration
+├── imsg/                    # iMessage integration on macOS
+├── jupyter-notebook/        # Jupyter notebook authoring and execution
+├── linear/                  # Linear issue tracking
+├── mcp-builder/             # MCP server creation
+├── memfs-search/            # Semantic search over agent memory
+├── morph-warpgrep/          # Morph WarpGrep + Fast Apply for coding agents
+├── notion/                  # Notion API integration
+├── obsidian/                # Obsidian vault operations
+├── pdf/                     # PDF text extraction and generation
+├── playwright/              # Browser automation and web app testing
+├── remotion/                # Video creation with React (Remotion)
+├── screenshot/              # Capture and annotate screenshots
+├── sentry/                  # Sentry error tracking
+├── slack/                   # Slack integration
+├── slides/                  # PowerPoint (.pptx) slide deck authoring
+├── social-cli/              # Social CLI for ATProtocol/Bluesky
+├── speech/                  # Text-to-speech via OpenAI Audio
+├── spotify-player/          # Spotify playback control
+├── spreadsheet/             # Excel/spreadsheet authoring
+├── transcribe/              # Audio transcription
+├── visual-identity/         # Persistent agent avatars via Flux Kontext
+└── yelp-search/             # Yelp business search
 
-meta/                    # Skills about the skill system
-└── skill-development/   # Creating and contributing skills
+meta/                        # Skills about the skill system
+└── skill-development/       # Creating and contributing skills
 ```
 
 **Principle:** Start simple, evolve based on actual needs rather than predicted scale.
@@ -83,23 +106,46 @@ meta/                    # Skills about the skill system
 ### Letta
 
 - **agent-development** - Comprehensive guide for designing and building Letta agents (architecture selection, memory design, model selection, tool configuration)
+- **conversations** - Managing agent conversations and message history
+- **fleet-management** - Managing and orchestrating multiple Letta agents
 - **importing-chatgpt-memory** - Reviewing ChatGPT exports by rendering conversations into readable markdown before importing durable memory into Letta
 - **letta-api-client** - Building applications with the Letta API using the Python and TypeScript SDKs (agents, tools, memory, multi-user patterns)
 - **letta-configuration** - Configure LLM models and providers for Letta agents and servers
-- **benchmarks** - Testing and benchmarking Letta agents
-- **conversations** - Managing agent conversations and message history
-- **fleet-management** - Managing and orchestrating multiple Letta agents
-- **learning-sdk** - Integration patterns for adding persistent memory to LLM agents using the Letta Learning SDK
 
 ### Tools
 
-- **extracting-pdf-text** - Extracting text content from PDF documents
+- **1password** - 1Password CLI integration for secret management
+- **ai-news** - Fetch and summarize recent AI news from RSS feeds and YouTube channels
+- **datadog** - Datadog monitoring, logs, and metrics
+- **discord** - Discord automation CLI (send/read/search messages, manage channels, reactions)
+- **doc** - Create and edit Word (.docx) documents
+- **figma** - Figma API integration for reading designs and components
+- **figma-implement-design** - Implement Figma designs as frontend code
+- **frontend-skill** - Frontend development patterns and helpers
+- **github** - GitHub API integration for issues, PRs, repos
+- **gog** - GOG.com games integration
 - **google-workspace** - Gmail and Google Calendar integration via OAuth 2.0
-- **imessage** - Integrating with iMessage on macOS
+- **imsg** - Send and read iMessages/SMS from macOS
+- **jupyter-notebook** - Author and execute Jupyter notebooks
 - **linear** - Linear issue tracking via GraphQL API
-- **mcp-builder** - Creating MCP (Model Context Protocol) servers to integrate external APIs and services
+- **mcp-builder** - Creating MCP (Model Context Protocol) servers
+- **memfs-search** - Semantic search over agent memory files
+- **morph-warpgrep** - Morph WarpGrep and Fast Apply integration for coding agents
+- **notion** - Notion API integration for pages and databases
+- **obsidian** - Obsidian vault operations from the terminal
+- **pdf** - PDF text extraction and generation
+- **playwright** - Browser automation and web app testing with Playwright
+- **remotion** - Video creation with React (Remotion)
+- **screenshot** - Capture and annotate screenshots
+- **sentry** - Sentry error tracking integration
 - **slack** - Slack integration for searching and sending messages
-- **webapp-testing** - Testing web applications using Playwright for UI verification and debugging
+- **slides** - Create PowerPoint (.pptx) slide decks
+- **social-cli** - Social CLI for ATProtocol/Bluesky operations
+- **speech** - Text-to-speech generation via OpenAI Audio API
+- **spotify-player** - Spotify playback control
+- **spreadsheet** - Create and edit Excel spreadsheets
+- **transcribe** - Audio transcription
+- **visual-identity** - Maintain persistent agent avatars with Flux Kontext
 - **yelp-search** - Searching and retrieving business information from Yelp
 
 ### Meta
@@ -148,7 +194,9 @@ Skills can optionally include:
 
 ## License
 
-MIT - Share knowledge freely
+MIT by default — see the root [LICENSE](LICENSE) file.
+
+Individual skills may carry their own `LICENSE` file when they originate from upstream projects (e.g. Anthropic-authored skills remain Apache 2.0; skills from other maintainers keep their original terms). Per-skill `LICENSE` files take precedence over the root license for that directory.
 
 ## Links
 

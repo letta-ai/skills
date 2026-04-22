@@ -6,7 +6,7 @@
 import { Letta } from "@letta-ai/letta-client";
 
 const client = new Letta({
-  apiKey: process.env.LETTA_API_KEY!,
+  apiKey: process.env.LETTA_API_KEY ?? "",
 });
 
 async function main() {
@@ -81,7 +81,7 @@ async function main() {
   // Helper function to extract assistant message
   // ==========================================================================
 
-  function getAssistantResponse(response: any): string {
+  function getAssistantResponse(response: { messages: Array<{ message_type: string; content?: string }> }): string {
     for (const message of response.messages) {
       if (message.message_type === "assistant_message") {
         return message.content;

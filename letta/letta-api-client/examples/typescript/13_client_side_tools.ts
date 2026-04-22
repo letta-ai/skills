@@ -9,7 +9,7 @@ import { execSync } from "child_process";
 import { Letta } from "@letta-ai/letta-client";
 
 const client = new Letta({
-  apiKey: process.env.LETTA_API_KEY!,
+  apiKey: process.env.LETTA_API_KEY ?? "",
 });
 
 async function main() {
@@ -111,8 +111,8 @@ async function main() {
         toolReturn = execSync(command, { encoding: "utf-8", timeout: 30000 });
         status = "success";
         stdoutLines = toolReturn.split("\n").filter((l) => l);
-      } catch (error: any) {
-        toolReturn = `Error: ${error.message}`;
+      } catch (error: unknown) {
+        toolReturn = `Error: ${error instanceof Error ? error.message : String(error)}`;
         status = "error";
         stderrLines = [error.message];
       }

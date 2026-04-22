@@ -7,7 +7,7 @@
  */
 import { Letta } from "@letta-ai/letta-client";
 
-const client = new Letta({ apiKey: process.env.LETTA_API_KEY! });
+const client = new Letta({ apiKey: process.env.LETTA_API_KEY ?? "" });
 
 async function main() {
   // ===========================================================================

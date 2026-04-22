@@ -1,139 +1,221 @@
 ---
-name: slack
-description: Search messages, read threads, and send messages in Slack. Use when looking up discussions, finding context about a topic, or sending notifications to channels.
+name: agent-slack
+description: Slack automation CLI — read/send/search messages, browse threads and channels, manage channels, download attachments, look up users, and run workflows.
 ---
 
-# Slack
+# Slack automation with `agent-slack`
 
-Search and interact with Slack workspaces from the command line.
+`agent-slack` is a CLI binary on `$PATH`. Invoke directly (e.g. `agent-slack user list`).
 
-## Important: Token Security
+## Setup
 
-**NEVER include `$SLACK_TOKEN` directly in curl commands.** The token will be logged and exposed.
+### 1. Install the CLI
 
-Always use the wrapper scripts which read the token from the environment internally:
-- `slack send` - not `curl ... -H "Authorization: Bearer $SLACK_TOKEN"`
-- `slack-api POST ...` - for advanced API calls
-
-## Quick Setup (New Users)
+If `agent-slack` is not found on `$PATH`, install it:
 
 ```bash
-# Add scripts to PATH
-export PATH="$PATH:$HOME/.letta/skills/slack/scripts"
-
-# Create Slack app with one click (opens browser)
-slack-setup
+curl -fsSL https://raw.githubusercontent.com/stablyai/agent-slack/main/install.sh | sh
 ```
 
-This opens Slack's app creation page with all permissions pre-configured. Then:
-1. Click **Create** to create the app
-2. Go to **OAuth & Permissions** → **Install to Workspace**
-3. Copy the **User OAuth Token** (`xoxp-...`) - NOT the bot token
-4. Set it in your shell:
-   ```bash
-   export SLACK_TOKEN="xoxp-..."
-   ```
+Alternatives: `npm i -g agent-slack` (requires Node >= 22.5) or `nix run github:stablyai/agent-slack`.
 
-**Why user token?** Bot tokens (`xoxb-`) cannot search messages (Slack limitation). User tokens can do everything bots can, plus search.
+### 2. Authenticate with Slack
 
-## Quick Setup (Existing Token)
+If you have **Slack Desktop** installed and signed in, authentication is automatic — no setup needed. Run this to verify:
 
 ```bash
-export SLACK_TOKEN="xoxp-..."   # User token (recommended) or xoxb- bot token
-export PATH="$PATH:$HOME/.letta/skills/slack/scripts"
+agent-slack auth test
 ```
 
-## Commands
-
-### Search messages
+If that fails (or you don't have Slack Desktop), try importing credentials from your browser:
 
 ```bash
-slack search "deployment failed"
-slack search "from:@caren database"
-slack search "in:#engineering api"
-slack search "in:#engineering after:2024-01-01 bug"
+# Try Chrome first, then Firefox
+agent-slack auth import-chrome
+agent-slack auth test
 ```
-
-Search supports Slack's modifiers: `from:`, `in:`, `to:`, `has:link`, `has:reaction`, `before:`, `after:`, `on:`.
-
-### Send messages
 
 ```bash
-slack send "#general" "Hello team!"
-slack send "#alerts" ":rocket: Deployment complete"
-slack send "@caren" "Quick question..."
+agent-slack auth import-firefox
+agent-slack auth test
 ```
 
-### Join a channel
-
-The bot must be a member of a channel to read its history. Join public channels with:
+If neither works, you can set tokens manually via environment variables:
 
 ```bash
-slack join "#engineering"
+export SLACK_TOKEN="xoxc-..."      # browser token
+export SLACK_COOKIE_D="xoxd-..."   # browser cookie
+agent-slack auth test
 ```
 
-For private channels, someone must invite the bot manually via Slack.
+### 3. Verify
 
-### List channels
+Check which workspaces are configured:
 
 ```bash
-slack channels
+agent-slack auth whoami
 ```
 
-### Read channel history
+If you have multiple workspaces, pass `--workspace "myteam"` to commands to disambiguate.
+
+## Canonical workflow (given a Slack message URL)
+
+1. Fetch a single message (plus thread summary, if any):
 
 ```bash
-slack history "#engineering"
-slack history "#engineering" 50    # Last 50 messages
+agent-slack message get "https://workspace.slack.com/archives/C123/p1700000000000000"
 ```
 
-### Read thread replies
+2. If you need the full thread:
 
 ```bash
-slack thread "C1234567890" "1234567890.123456"
-slack thread "C1234567890" "1234567890.123456" --json   # Raw JSON output
+agent-slack message list "https://workspace.slack.com/archives/C123/p1700000000000000"
 ```
 
-Thread timestamps (`ts`) come from search results or channel history.
+## Browse recent channel messages
 
-### List and view users
+To see what's been posted recently in a channel (channel history):
 
 ```bash
-slack users
-slack user "U1234567890"
+agent-slack message list "general" --limit 20
+agent-slack message list "C0123ABC" --limit 10
+agent-slack message list "general" --with-reaction eyes --oldest "1770165109.000000" --limit 20
+agent-slack message list "general" --without-reaction dart --oldest "1770165109.000000" --limit 20
 ```
 
-## Advanced: Direct API Access
+This returns the most recent messages in chronological order. Use `--limit` to control how many (default 25).
+When using `--with-reaction` or `--without-reaction`, you must also pass `--oldest` to bound scanning.
 
-For operations not covered by `slack`, use `slack-api` (keeps token secure):
+## Attachments (snippets/images/files)
+
+`message get/list` and `search` auto-download attachments to `~/.agent-slack/tmp/downloads/` and return metadata in `message.files[]` (including `name` and `path`). Failed downloads include a `message.files[].error` field.
+
+## Draft a message (browser editor)
+
+Opens a Slack-like rich-text editor in the browser for composing messages with formatting toolbar (bold, italic, strikethrough, links, lists, quotes, code, code blocks). After sending, shows a "View in Slack" link.
 
 ```bash
-# Post with rich formatting (blocks)
-slack-api POST chat.postMessage '{"channel": "#general", "blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "*Bold* and _italic_"}}]}'
-
-# Add reaction
-slack-api POST reactions.add '{"channel": "C1234", "timestamp": "1234.5678", "name": "thumbsup"}'
-
-# Get user info
-slack-api GET "users.info?user=U1234567890"
-
-# Reply to thread
-slack-api POST chat.postMessage '{"channel": "C1234", "thread_ts": "1234.5678", "text": "Thread reply"}'
+agent-slack message draft "general"
+agent-slack message draft "general" "initial text"
+agent-slack message draft "https://workspace.slack.com/archives/C123/p1700000000000000"
 ```
 
-See [references/api.md](references/api.md) for more API patterns.
+## Send, edit, delete, or react
 
-## Permissions Included
+```bash
+agent-slack message send "https://workspace.slack.com/archives/C123/p1700000000000000" "I can take this."
+agent-slack message send "alerts-staging" "here's the report" --attach ./report.md
+agent-slack message edit "https://workspace.slack.com/archives/C123/p1700000000000000" "I can take this today."
+agent-slack message delete "https://workspace.slack.com/archives/C123/p1700000000000000"
 
-The manifest (`slack-setup`) includes these bot scopes:
+agent-slack message send "general" "Here's the plan:
+- Step 1: do the thing
+- Step 2: verify it worked
+  - Sub-step: check logs"
+agent-slack message react add "https://workspace.slack.com/archives/C123/p1700000000000000" "eyes"
+agent-slack message react remove "https://workspace.slack.com/archives/C123/p1700000000000000" "eyes"
+```
 
-| Category | Scopes |
-|----------|--------|
-| Search | `search:read` |
-| Messaging | `chat:write`, `chat:write.public`, `reactions:read`, `reactions:write` |
-| Public channels | `channels:read`, `channels:history`, `channels:join` |
-| Private channels | `groups:read`, `groups:history` |
-| Direct messages | `im:read`, `im:write`, `im:history` |
-| Users | `users:read`, `users:read.email` |
-| Files | `files:read`, `files:write` |
-| Other | `emoji:read`, `links:read` |
+Channel mode for edit/delete requires `--ts`:
+
+```bash
+agent-slack message edit "general" "Updated text" --workspace "myteam" --ts "1770165109.628379"
+agent-slack message delete "general" --workspace "myteam" --ts "1770165109.628379"
+```
+
+Attach options for `message send`:
+
+- `--attach <path>` upload a local file (repeatable)
+
+## List channels + create/invite users
+
+```bash
+agent-slack channel list
+agent-slack channel list --user "@alice" --limit 50
+agent-slack channel list --all --limit 100
+agent-slack channel new --name "incident-war-room"
+agent-slack channel new --name "incident-leads" --private
+agent-slack channel invite --channel "incident-war-room" --users "U01AAAA,@alice,bob@example.com"
+agent-slack channel invite --channel "incident-war-room" --users "partner@vendor.com" --external
+agent-slack channel invite --channel "incident-war-room" --users "partner@vendor.com" --external --allow-external-user-invites
+```
+
+For `--external`, invite targets must be emails. By default, invitees are external-limited; add
+`--allow-external-user-invites` to allow them to invite other users.
+
+## Search (messages + files)
+
+Prefer channel-scoped search for reliability:
+
+```bash
+agent-slack search all "smoke tests failed" --channel "alerts" --after 2026-01-01 --before 2026-02-01
+agent-slack search messages "stably test" --user "@alice" --channel general
+agent-slack search files "testing" --content-type snippet --limit 10
+```
+
+## Multi-workspace guardrail (important)
+
+If you have multiple workspaces configured and you use a channel **name** (e.g. `general`), pass `--workspace` (or set `SLACK_WORKSPACE_URL`) to avoid ambiguity:
+
+```bash
+agent-slack message get "general" --workspace "https://myteam.slack.com" --ts "1770165109.628379"
+agent-slack message get "general" --workspace "myteam" --ts "1770165109.628379"
+```
+
+## DM / group DM channels
+
+Get the channel ID for a DM or group DM, useful for sending messages to a group of users:
+
+```bash
+agent-slack user dm-open @alice @bob
+agent-slack user dm-open U01AAAA U02BBBB U03CCCC
+```
+
+## Mark as read
+
+Mark a channel, DM, or group DM as read up to a given message:
+
+```bash
+agent-slack channel mark "https://workspace.slack.com/archives/C123/p1700000000000000"
+agent-slack channel mark "general" --workspace "myteam" --ts "1770165109.628379"
+agent-slack channel mark "D0A04PB2QBW" --workspace "myteam" --ts "1770165109.628379"
+```
+
+To make a specific message appear unread, set `--ts` to just before it (subtract `0.000001`). This moves the read cursor so that message and everything after it appear as new:
+
+```bash
+agent-slack channel mark "general" --workspace "myteam" --ts "1770165109.628378"
+```
+
+## Workflows
+
+Discover and run Slack workflows bookmarked in channels:
+
+```bash
+# List workflows in a channel
+agent-slack workflow list "#ops"
+
+# Preview trigger metadata (no side effects)
+agent-slack workflow preview "Ft123ABC"
+
+# Get workflow definition including form fields and steps
+agent-slack workflow get "Ft123ABC"
+agent-slack workflow get "Wf456DEF"
+
+# Trip a workflow trigger
+agent-slack workflow run "Ft123ABC" --channel "#ops"
+```
+
+## Canvas + Users
+
+```bash
+agent-slack canvas get "https://workspace.slack.com/docs/T123/F456"
+agent-slack user list --workspace "https://workspace.slack.com" --limit 100
+agent-slack user get "@alice" --workspace "https://workspace.slack.com"
+```
+
+## References
+
+- references/commands.md: full command map + all flags
+- references/targets.md: URL vs `#channel` targeting rules
+- references/output.md: JSON output shapes + download paths

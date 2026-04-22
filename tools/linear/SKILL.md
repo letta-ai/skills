@@ -1,81 +1,136 @@
 ---
-name: linear
-description: Manage Linear issues via GraphQL API. List, filter, update, prioritize, comment, and search issues. Use when the user asks about Linear, issues, project management, or backlog.
+name: linear-cli
+description: Manage Linear issues from the command line using the linear cli. This skill allows automating linear management.
 ---
 
-# Linear
+# Linear CLI
 
-Interact with Linear's GraphQL API to manage issues.
+A CLI to manage Linear issues from the command line, with git and jj integration.
 
-## When to Use
+## Prerequisites
 
-- User asks about Linear issues, tickets, or project management
-- Need to triage, prioritize, or update issue status
-- Want to search or comment on issues
-- Managing a backlog or sprint
+The `linear` command must be available on PATH. To check:
 
-## Setup
-
-Requires `LINEAR_API_KEY` environment variable. Get one from Linear Settings > API > Personal API keys.
-
-## Quick Operations
-
-### List issues by status
 ```bash
-npx tsx scripts/linear.ts list --state "Triage"
-npx tsx scripts/linear.ts list --state "In Progress"
-npx tsx scripts/linear.ts list --state "Backlog"
+linear --version
 ```
 
-### List issues assigned to someone
+If not installed, follow the instructions at:
+https://github.com/schpet/linear-cli?tab=readme-ov-file#install
+
+## Best Practices for Markdown Content
+
+When working with issue descriptions or comment bodies that contain markdown, **always prefer using file-based flags** instead of passing content as command-line arguments:
+
+- Use `--description-file` for `issue create` and `issue update` commands
+- Use `--body-file` for `comment add` and `comment update` commands
+
+**Why use file-based flags:**
+
+- Ensures proper formatting in the Linear web UI
+- Avoids shell escaping issues with newlines and special characters
+- Prevents literal `\n` sequences from appearing in markdown
+- Makes it easier to work with multi-line content
+
+**Example workflow:**
+
 ```bash
-npx tsx scripts/linear.ts list --assignee "cameron"
+# Write markdown to a temporary file
+cat > /tmp/description.md <<'EOF'
+## Summary
+
+- First item
+- Second item
+
+## Details
+
+This is a detailed description with proper formatting.
+EOF
+
+# Create issue using the file
+linear issue create --title "My Issue" --description-file /tmp/description.md
+
+# Or for comments
+linear issue comment add ENG-123 --body-file /tmp/comment.md
 ```
 
-### Get issue details
-```bash
-npx tsx scripts/linear.ts get <issue-id>
+**Only use inline flags** (`--description`, `--body`) for simple, single-line content.
+
+## Available Commands
+
+```
+linear auth               # Manage Linear authentication
+linear issue              # Manage Linear issues
+linear team               # Manage Linear teams
+linear project            # Manage Linear projects
+linear project-update     # Manage project status updates
+linear cycle              # Manage Linear team cycles
+linear milestone          # Manage Linear project milestones
+linear initiative         # Manage Linear initiatives
+linear initiative-update  # Manage initiative status updates (timeline posts)
+linear label              # Manage Linear issue labels
+linear document           # Manage Linear documents
+linear config             # Interactively generate .linear.toml configuration
+linear schema             # Print the GraphQL schema to stdout
+linear api                # Make a raw GraphQL API request
 ```
 
-### Update issue priority (0=none, 1=urgent, 2=high, 3=medium, 4=low)
+## Discovering Options
+
+To see available subcommands and flags, run `--help` on any command:
+
 ```bash
-npx tsx scripts/linear.ts update <issue-id> --priority 2
+linear --help
+linear issue --help
+linear issue list --help
+linear issue create --help
 ```
 
-### Update issue state
+Each command has detailed help output describing all available flags and options.
+
+## Using the Linear GraphQL API Directly
+
+**Prefer the CLI for all supported operations.** The `api` command should only be used as a fallback for queries not covered by the CLI.
+
+### Check the schema for available types and fields
+
+Write the schema to a tempfile, then search it:
+
 ```bash
-npx tsx scripts/linear.ts update <issue-id> --state "In Progress"
+linear schema -o "${TMPDIR:-/tmp}/linear-schema.graphql"
+grep -i "cycle" "${TMPDIR:-/tmp}/linear-schema.graphql"
+grep -A 30 "^type Issue " "${TMPDIR:-/tmp}/linear-schema.graphql"
 ```
 
-### Add comment
+### Make a GraphQL request
+
+**Important:** GraphQL queries containing non-null type markers (e.g. `String` followed by an exclamation mark) must be passed via heredoc stdin to avoid escaping issues. Simple queries without those markers can be passed inline.
+
 ```bash
-npx tsx scripts/linear.ts comment <issue-id> "Your comment here"
+# Simple query (no type markers, so inline is fine)
+linear api '{ viewer { id name email } }'
+
+# Query with variables — use heredoc to avoid escaping issues
+linear api --variable teamId=abc123 <<'GRAPHQL'
+query($teamId: String!) { team(id: $teamId) { name } }
+GRAPHQL
+
+# Search issues by text
+linear api --variable term=onboarding <<'GRAPHQL'
+query($term: String!) { searchIssues(term: $term, first: 20) { nodes { identifier title state { name } } } }
+GRAPHQL
+
+# Pipe to jq for filtering
+linear api '{ issues(first: 5) { nodes { identifier title } } }' | jq '.data.issues.nodes[].title'
 ```
 
-### Search issues
+### Advanced: Using curl directly
+
+For cases where you need full HTTP control, use `linear auth token`:
+
 ```bash
-npx tsx scripts/linear.ts search "search query"
+curl -s -X POST https://api.linear.app/graphql \
+  -H "Content-Type: application/json" \
+  -H "Authorization: $(linear auth token)" \
+  -d '{"query": "{ viewer { id } }"}'
 ```
-
-## Triage Workflow
-
-1. List triage issues: `list --state "Triage"`
-2. Review each issue, decide priority
-3. Update priority and move to appropriate state
-4. Add comments for context if needed
-
-## Output Format
-
-All commands output JSON for easy parsing. Use `jq` for filtering if needed.
-
-## Battle-Tested Insights
-
-### GraphQL Query Patterns
-- Linear uses GraphQL with nested filtering. State filters need the exact format: `state: { name: { eq: "State Name" } }`
-- Assignee filters are case-insensitive with `containsIgnoreCase`
-- When updating state, you need to fetch the state ID first - state names alone won't work in mutations
-
-### Common Pitfalls
-- Issue IDs vs Identifiers: The API accepts both UUID-style IDs and human-readable identifiers (e.g., "ENG-123"), but some endpoints prefer one over the other
-- Priority is numeric (0-4), not a string
-- Rate limits are generous but exist - batch operations if doing bulk updates

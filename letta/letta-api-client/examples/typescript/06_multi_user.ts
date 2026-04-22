@@ -6,7 +6,7 @@
 import { Letta } from "@letta-ai/letta-client";
 
 const client = new Letta({
-  apiKey: process.env.LETTA_API_KEY!,
+  apiKey: process.env.LETTA_API_KEY ?? "",
 });
 
 // =============================================================================
@@ -35,15 +35,6 @@ async function oneAgentPerUser() {
       tags: [`user:${userId}`],
     });
     return agent;
-  }
-
-  // Find existing agent for user
-  async function findUserAgent(userId: string) {
-    const agents = client.agents.list({ tags: [`user:${userId}`], limit: 1 });
-    for await (const agent of agents) {
-      return agent;
-    }
-    return null;
   }
 
   // Create agents for two users
@@ -122,7 +113,7 @@ async function sharedAgentWithConversations() {
 
   // Extract responses from streams
   let aliceResponse = "";
-  for await (const chunk of streamAlice as any) {
+  for await (const chunk of streamAlice as AsyncIterable<{ message_type: string; content?: string }>) {
     if (chunk.message_type === "assistant_message") {
       const content = typeof chunk.content === "string" ? chunk.content : JSON.stringify(chunk.content);
       aliceResponse = content;
@@ -131,7 +122,7 @@ async function sharedAgentWithConversations() {
   console.log(`\nAlice's response: ${aliceResponse.slice(0, 100)}...`);
 
   let bobResponse = "";
-  for await (const chunk of streamBob as any) {
+  for await (const chunk of streamBob as AsyncIterable<{ message_type: string; content?: string }>) {
     if (chunk.message_type === "assistant_message") {
       const content = typeof chunk.content === "string" ? chunk.content : JSON.stringify(chunk.content);
       bobResponse = content;
@@ -161,7 +152,7 @@ async function concurrentRequests(convIds: string[]) {
 
   // Consume both streams
   for (const stream of streams) {
-    for await (const chunk of stream as any) {
+    for await (const chunk of stream as AsyncIterable<{ message_type: string; content?: string }>) {
       if (chunk.message_type === "assistant_message") {
         const content = typeof chunk.content === "string" ? chunk.content : JSON.stringify(chunk.content);
         console.log(`Response: ${content.slice(0, 50)}...`);
@@ -188,7 +179,7 @@ class UserAgentService {
   async getOrCreateAgent(userId: string, userName: string): Promise<string> {
     // Check cache first
     if (this.agentCache.has(userId)) {
-      return this.agentCache.get(userId)!;
+      return this.agentCache.get(userId) ?? "";
     }
 
     // Look for existing agent
@@ -249,7 +240,7 @@ async function main() {
   await concurrentRequests([convAlice.id, convBob.id]);
 
   console.log("\n--- User Service Example ---");
-  const service = new UserAgentService(process.env.LETTA_API_KEY!);
+  const service = new UserAgentService(process.env.LETTA_API_KEY ?? "");
   const agentId = await service.getOrCreateAgent("user-003", "Charlie");
   console.log(`Got/created agent for Charlie: ${agentId}`);
 }
