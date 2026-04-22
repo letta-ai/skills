@@ -1,0 +1,198 @@
+# curated.yaml
+#
+# Skills bundled with Letta Code Desktop.
+#
+# This file is the source of truth for which skills ship with the desktop
+# app. The desktop build reads this file, copies each listed skill into
+# apps/code-desktop/resources/skills/curated/, and generates the
+# skills-curated-cache.json manifest served by the Electron proxy.
+#
+# Editing rules
+# -------------
+# - `id` must be unique and stable. It's used as the on-disk name under
+#   ~/.letta/skills/<id> when a user installs the skill, and as the key
+#   the UI uses to identify "installed" skills. Don't rename without a
+#   migration plan.
+# - `path` is the skill directory relative to the repo root (where
+#   SKILL.md lives).
+# - `shortDescription` appears on the skill card in the Skills view.
+#   Keep it under ~70 characters.
+# - `iconLarge` and `iconSmall` are paths inside the skill directory.
+#   PNG (large) + SVG (small) is conventional; other formats work too.
+#
+# Adding a skill
+# --------------
+# 1. Land the skill in this repo with a SKILL.md, an `assets/` dir with
+#    icons, and a LICENSE.
+# 2. Add an entry below.
+# 3. Open a PR. Acceptance depends on utility, polish, and fit.
+#
+# Removing a skill
+# ----------------
+# Delete the entry. The skill can still live in the repo — it just
+# won't be bundled with the desktop app by default.
+
+version: 1
+
+skills:
+  - id: 1password
+    path: tools/1password
+    shortDescription: Manage secrets and credentials via 1Password CLI
+    iconLarge: assets/1password.png
+    iconSmall: assets/1password-small.svg
+
+  - id: datadog
+    path: tools/datadog
+    shortDescription: Query logs, metrics, and monitors via Datadog API
+    iconLarge: assets/datadog.png
+    iconSmall: assets/datadog-small.svg
+
+  - id: discord
+    path: tools/discord
+    shortDescription: Send and manage Discord messages and channels
+    iconLarge: assets/discord.png
+    iconSmall: assets/discord-small.svg
+
+  - id: doc
+    path: tools/doc
+    shortDescription: Create and review docx files
+    iconLarge: assets/doc.png
+    iconSmall: assets/doc-small.svg
+
+  - id: figma
+    path: tools/figma
+    shortDescription: Use Figma MCP for design-to-code work
+    iconLarge: assets/figma.png
+    iconSmall: assets/figma-small.svg
+
+  - id: frontend-skill
+    path: tools/frontend-skill
+    shortDescription: Design visually strong landing pages, sites, and UI
+    iconLarge: assets/frontend.png
+    iconSmall: assets/frontend-skill-small.svg
+
+  - id: github
+    path: tools/github
+    shortDescription: Manage PRs, issues, and CI via the gh CLI
+    iconLarge: assets/github.png
+    iconSmall: assets/github-small.svg
+
+  - id: gog
+    path: tools/gog
+    shortDescription: Google Workspace CLI for Gmail, Calendar, and Drive
+    iconLarge: assets/google.png
+    iconSmall: assets/gog-small.svg
+
+  - id: imsg
+    path: tools/imsg
+    shortDescription: Send and read iMessages via macOS Messages.app
+    iconLarge: assets/imsg.png
+    iconSmall: assets/imsg-small.svg
+
+  - id: jupyter-notebook
+    path: tools/jupyter-notebook
+    shortDescription: Create and edit Jupyter notebooks
+    iconLarge: assets/jupyter.png
+    iconSmall: assets/jupyter-small.svg
+
+  - id: letta-api-client
+    path: letta/letta-api-client
+    shortDescription: Build stateful agents with the Letta API
+    iconLarge: assets/letta.png
+    iconSmall: assets/letta-api-client-small.svg
+
+  - id: linear
+    path: tools/linear
+    shortDescription: Manage Linear issues from the command line
+    iconLarge: assets/linear.png
+    iconSmall: assets/linear-small.svg
+
+  - id: notion
+    path: tools/notion
+    shortDescription: Create and manage Notion pages and databases
+    iconLarge: assets/notion.png
+    iconSmall: assets/notion-small.svg
+
+  - id: obsidian
+    path: tools/obsidian
+    shortDescription: Work with Obsidian vaults and Markdown notes
+    iconLarge: assets/obsidian.png
+    iconSmall: assets/obsidian-small.svg
+
+  - id: pdf
+    path: tools/pdf
+    shortDescription: Create, edit, and review PDFs
+    iconLarge: assets/pdf.png
+    iconSmall: assets/pdf-small.svg
+
+  - id: playwright
+    path: tools/playwright
+    shortDescription: Automate real browsers from the terminal
+    iconLarge: assets/playwright.png
+    iconSmall: assets/playwright-small.svg
+
+  - id: remotion
+    path: tools/remotion
+    shortDescription: Create programmatic videos with React and Remotion
+    iconLarge: assets/remotion.png
+    iconSmall: assets/remotion-small.svg
+
+  - id: screenshot
+    path: tools/screenshot
+    shortDescription: Capture desktop and application screenshots
+    iconLarge: assets/screenshot.png
+    iconSmall: assets/screenshot-small.svg
+
+  - id: sentry
+    path: tools/sentry
+    shortDescription: Read-only Sentry observability via API
+    iconLarge: assets/sentry.png
+    iconSmall: assets/sentry-small.svg
+
+  - id: slack
+    path: tools/slack
+    shortDescription: Send messages and manage Slack channels
+    iconLarge: assets/slack.png
+    iconSmall: assets/slack-small.svg
+
+  - id: slides
+    path: tools/slides
+    shortDescription: Create and edit PPTX slide decks
+    iconLarge: assets/slides.png
+    iconSmall: assets/slides-small.svg
+
+  - id: social-cli
+    path: tools/social-cli
+    shortDescription: Post, read, and automate Bluesky and X
+    iconLarge: assets/social-cli.png
+    iconSmall: assets/social-cli-small.svg
+
+  - id: speech
+    path: tools/speech
+    shortDescription: Generate narrated audio from text
+    iconLarge: assets/speech.png
+    iconSmall: assets/speech-small.svg
+
+  - id: spotify-player
+    path: tools/spotify-player
+    shortDescription: Control Spotify playback from the terminal
+    iconLarge: assets/spotify.png
+    iconSmall: assets/spotify-player-small.svg
+
+  - id: spreadsheet
+    path: tools/spreadsheet
+    shortDescription: Create, edit, and analyze spreadsheets
+    iconLarge: assets/spreadsheet.png
+    iconSmall: assets/spreadsheet-small.svg
+
+  - id: transcribe
+    path: tools/transcribe
+    shortDescription: Transcribe audio with optional diarization
+    iconLarge: assets/transcribe.png
+    iconSmall: assets/transcribe-small.svg
+
+  - id: visual-identity
+    path: tools/visual-identity
+    shortDescription: Persistent agent visual identity via Flux Kontext
+    iconLarge: assets/flux.png
+    iconSmall: assets/visual-identity-small.svg
