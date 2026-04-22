@@ -31,11 +31,17 @@ Follow the official CLI get-started steps. Don't guess install commands.
 6. Verify access inside tmux: `op whoami` (must succeed before any secret read).
 7. If multiple accounts: use `--account` or `OP_ACCOUNT`.
 
-## REQUIRED tmux session (T-Max)
+## REQUIRED tmux session
 
-The shell tool uses a fresh TTY per command. To avoid re-prompts and failures, always run `op` inside a dedicated tmux session with a fresh socket/session name.
+The shell tool uses a fresh TTY per command. To avoid re-prompts and failures, always run `op` inside a dedicated tmux session with a fresh socket and session name.
 
-Example (see `tmux` skill for socket conventions, do not reuse old session names):
+Socket conventions:
+
+- Put sockets under `${LETTA_TMUX_SOCKET_DIR:-${TMPDIR:-/tmp}/letta-tmux-sockets}` so they're isolated and easy to clean up.
+- Use a timestamped session name (e.g. `op-auth-$(date +%Y%m%d-%H%M%S)`) so you never reuse an old session — previous auth state may be stale or broken.
+- Kill the session when you're done (`tmux -S "$SOCKET" kill-session -t "$SESSION"`) to avoid leaking long-running tmux processes.
+
+Full example:
 
 ```bash
 SOCKET_DIR="${LETTA_TMUX_SOCKET_DIR:-${TMPDIR:-/tmp}/letta-tmux-sockets}"

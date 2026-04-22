@@ -67,11 +67,9 @@ tools/                       # General tool integrations
 ├── discord/                 # Discord automation CLI
 ├── doc/                     # Word document creation and editing
 ├── figma/                   # Figma API integration
-├── figma-implement-design/  # Implement Figma designs as code
 ├── frontend-skill/          # Frontend development patterns
 ├── github/                  # GitHub API integration
-├── gog/                     # GOG.com games integration
-├── google-workspace/        # Gmail and Google Calendar integration
+├── gog/                     # Google Workspace CLI (Gmail/Calendar/Drive/Docs/Sheets)
 ├── imsg/                    # iMessage integration on macOS
 ├── jupyter-notebook/        # Jupyter notebook authoring and execution
 ├── linear/                  # Linear issue tracking
@@ -120,11 +118,9 @@ meta/                        # Skills about the skill system
 - **discord** - Discord automation CLI (send/read/search messages, manage channels, reactions)
 - **doc** - Create and edit Word (.docx) documents
 - **figma** - Figma API integration for reading designs and components
-- **figma-implement-design** - Implement Figma designs as frontend code
 - **frontend-skill** - Frontend development patterns and helpers
 - **github** - GitHub API integration for issues, PRs, repos
-- **gog** - GOG.com games integration
-- **google-workspace** - Gmail and Google Calendar integration via OAuth 2.0
+- **gog** - Google Workspace CLI (Gmail, Calendar, Drive, Docs, Sheets, Contacts)
 - **imsg** - Send and read iMessages/SMS from macOS
 - **jupyter-notebook** - Author and execute Jupyter notebooks
 - **linear** - Linear issue tracking via GraphQL API
