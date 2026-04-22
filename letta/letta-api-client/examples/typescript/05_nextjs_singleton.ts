@@ -16,7 +16,7 @@ let lettaClient: Letta | null = null;
 export function getLettaClient(): Letta {
   if (!lettaClient) {
     lettaClient = new Letta({
-      apiKey: process.env.LETTA_API_KEY!,
+      apiKey: process.env.LETTA_API_KEY ?? "",
     });
   }
   return lettaClient;
@@ -24,7 +24,7 @@ export function getLettaClient(): Letta {
 
 // Direct export for simple imports
 export const letta = new Letta({
-  apiKey: process.env.LETTA_API_KEY!,
+  apiKey: process.env.LETTA_API_KEY ?? "",
 });
 
 // =============================================================================

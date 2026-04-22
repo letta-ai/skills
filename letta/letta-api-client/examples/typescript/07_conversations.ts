@@ -12,11 +12,11 @@
 import { Letta } from "@letta-ai/letta-client";
 
 const client = new Letta({
-  apiKey: process.env.LETTA_API_KEY!,
+  apiKey: process.env.LETTA_API_KEY ?? "",
 });
 
 // Helper to extract string content from message
-function getContent(content: string | any[]): string {
+function getContent(content: string | unknown[]): string {
   return typeof content === "string" ? content : JSON.stringify(content);
 }
 
@@ -194,9 +194,9 @@ async function main() {
 
   for await (const msg of messages) {
     if (msg.message_type === "user_message") {
-      console.log(`  User: ${getContent((msg as any).content).slice(0, 50)}...`);
+      console.log(`  User: ${getContent((msg as unknown as { content: string | unknown[] }).content).slice(0, 50)}...`);
     } else if (msg.message_type === "assistant_message") {
-      console.log(`  Agent: ${getContent((msg as any).content).slice(0, 50)}...`);
+      console.log(`  Agent: ${getContent((msg as unknown as { content: string | unknown[] }).content).slice(0, 50)}...`);
     }
   }
 

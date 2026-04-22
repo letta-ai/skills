@@ -10,7 +10,7 @@ import { Letta } from "@letta-ai/letta-client";
 // =============================================================================
 
 const cloudClient = new Letta({
-  apiKey: process.env.LETTA_API_KEY!,
+  apiKey: process.env.LETTA_API_KEY ?? "",
 });
 
 async function cloudExample() {
@@ -47,8 +47,8 @@ async function localExample() {
     });
     console.log(`Connected to local server. Created: ${agent.id}`);
     await localClient.agents.delete(agent.id);
-  } catch (e: any) {
-    console.log(`Local server not available: ${e.message || e}`);
+  } catch (e: unknown) {
+    console.log(`Local server not available: ${e instanceof Error ? e.message : String(e)}`);
   }
 }
 
