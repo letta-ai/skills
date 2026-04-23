@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — Network Graph</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* ── Theme Variables ──────────────────────────────────── */
+        :root {
+            --dash-bg: #0d1117;
+            --dash-surface: #161b22;
+            --dash-surface-alt: #21262d;
+            --dash-border: #30363d;
+            --dash-text: #c9d1d9;
+            --dash-text-muted: #8b949e;
+            --dash-accent: #58a6ff;
+            --dash-accent-light: #79c0ff;
+            --dash-success: #3fb950;
+            --dash-warning: #d29922;
+            --dash-error: #f85149;
+            --dash-sidebar-width: 360px;
+        }
+
+        :root[data-theme="light"] {
+            --dash-bg: #ffffff;
+            --dash-surface: #f6f8fa;
+            --dash-surface-alt: #eaeef2;
+            --dash-border: #d0d7de;
+            --dash-text: #1f2328;
+            --dash-text-muted: #656d76;
+            --dash-accent: #0969da;
+            --dash-accent-light: #218bff;
+            --dash-success: #1a7f37;
+            --dash-warning: #9a6700;
+            --dash-error: #cf222e;
+        }
+
+        /* ── Reset & Base ─────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--dash-bg);
+            color: var(--dash-text);
+            overflow: hidden;
+        }
+
+        /* ── Layout ───────────────────────────────────────────── */
+        .dashboard-layout {
+            display: flex;
+            height: 100vh;
+        }
+
+        .chart-area {
+            flex: 1;
+            position: relative;
+            min-width: 0;
+        }
+
+        .chart-area svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ── Header Bar ───────────────────────────────────────── */
+        .dashboard-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1.25rem;
+            background: rgba(13, 17, 23, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--dash-border);
+        }
+
+        :root[data-theme="light"] .dashboard-header {
+            background: rgba(255, 255, 255, 0.85);
+        }
+
+        .dashboard-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--dash-text);
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        /* ── Theme Toggle ─────────────────────────────────────── */
+        .theme-toggle {
+            background: var(--dash-surface-alt);
+            border: 1px solid var(--dash-border);
+            color: var(--dash-text-muted);
+            padding: 0.35rem 0.65rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: color 0.15s, border-color 0.15s;
+        }
+
+        .theme-toggle:hover {
+            color: var(--dash-text);
+            border-color: var(--dash-accent);
+        }
+
+        /* ── Freshness Badge ──────────────────────────────────── */
+        .freshness-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.75rem;
+            color: var(--dash-text-muted);
+        }
+
+        .freshness-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--dash-success);
+        }
+
+        .freshness-dot.aging { background: var(--dash-warning); }
+        .freshness-dot.stale { background: var(--dash-error); }
+
+        /* ── Filter Chips ─────────────────────────────────────── */
+        .filter-bar {
+            position: absolute;
+            top: 4rem;
+            left: 1rem;
+            z-index: 5;
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-chip {
+            padding: 0.3rem 0.7rem;
+            border-radius: 20px;
+            border: 1px solid var(--dash-border);
+            background: var(--dash-surface-alt);
+            color: var(--dash-text-muted);
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.15s;
+            user-select: none;
+        }
+
+        .filter-chip:hover { border-color: var(--dash-accent); color: var(--dash-text); }
+        .filter-chip.active { background: var(--dash-accent); border-color: var(--dash-accent); color: #fff; }
+        .filter-chip .count { opacity: 0.6; margin-left: 0.2rem; }
+
+        /* ── Search ───────────────────────────────────────────── */
+        .search-box {
+            position: absolute;
+            top: 4rem;
+            right: 1rem;
+            z-index: 5;
+        }
+
+        .search-box input {
+            background: var(--dash-surface-alt);
+            border: 1px solid var(--dash-border);
+            color: var(--dash-text);
+            padding: 0.45rem 0.85rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            width: 220px;
+            transition: border-color 0.15s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--dash-accent);
+        }
+
+        /* ── Graph Styles ─────────────────────────────────────── */
+        .link {
+            fill: none;
+            stroke-opacity: 0.25;
+            transition: stroke-opacity 0.3s;
+        }
+
+        .link.highlighted { stroke-opacity: 0.9; }
+        .link.dimmed { stroke-opacity: 0.04; }
+
+        .node circle {
+            stroke: var(--dash-border);
+            stroke-width: 1.5px;
+            cursor: pointer;
+            transition: opacity 0.3s, stroke-width 0.2s;
+        }
+
+        .node.highlighted circle { stroke-width: 3px; stroke: var(--dash-accent); }
+        .node.dimmed circle { opacity: 0.15; }
+
+        .node text {
+            font-size: 9px;
+            fill: var(--dash-text-muted);
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .node.highlighted text { font-weight: bold; fill: var(--dash-text); font-size: 11px; }
+        .node.dimmed text { opacity: 0.1; }
+
+        /* ── Detail Sidebar ───────────────────────────────────── */
+        .detail-sidebar {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: var(--dash-sidebar-width);
+            height: 100%;
+            background: var(--dash-surface);
+            border-left: 1px solid var(--dash-border);
+            z-index: 20;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-sidebar.open { transform: translateX(0); }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--dash-border);
+        }
+
+        .sidebar-header h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--dash-text);
+        }
+
+        .sidebar-close {
+            background: none;
+            border: none;
+            color: var(--dash-text-muted);
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+
+        .sidebar-close:hover { color: var(--dash-text); }
+
+        .sidebar-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.25rem;
+        }
+
+        .detail-field {
+            margin-bottom: 1rem;
+        }
+
+        .detail-label {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--dash-text-muted);
+            margin-bottom: 0.25rem;
+        }
+
+        .detail-value {
+            display: block;
+            font-size: 0.9rem;
+            color: var(--dash-text);
+            line-height: 1.5;
+        }
+
+        .detail-badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: var(--dash-surface-alt);
+            color: var(--dash-accent);
+        }
+
+        .connections-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .connections-list li {
+            padding: 0.5rem 0.65rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            margin-bottom: 0.3rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .connections-list li:hover { background: var(--dash-surface-alt); }
+
+        /* ── States ───────────────────────────────────────────── */
+        .dashboard-state {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            z-index: 15;
+            background: var(--dash-bg);
+        }
+
+        .dashboard-state.hidden { display: none; }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--dash-border);
+            border-top-color: var(--dash-accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .state-text { font-size: 0.9rem; color: var(--dash-text-muted); }
+
+        .state-error { color: var(--dash-error); font-weight: 600; }
+
+        .state-hint { font-size: 0.8rem; color: var(--dash-text-muted); }
+
+        .retry-btn {
+            margin-top: 0.5rem;
+            padding: 0.4rem 1rem;
+            border-radius: 6px;
+            border: 1px solid var(--dash-border);
+            background: var(--dash-surface-alt);
+            color: var(--dash-text);
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .retry-btn:hover { border-color: var(--dash-accent); }
+
+        /* ── Responsive ───────────────────────────────────────── */
+        @media (max-width: 1024px) {
+            .detail-sidebar {
+                position: fixed;
+                top: auto;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                width: 100%;
+                height: 50vh;
+                border-left: none;
+                border-top: 1px solid var(--dash-border);
+                transform: translateY(100%);
+            }
+            .detail-sidebar.open { transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            .search-box { display: none; }
+            .filter-bar { top: 3.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-layout">
+        <div class="chart-area">
+            <!-- Header -->
+            <div class="dashboard-header">
+                <span class="dashboard-title">Network Graph</span>
+                <div class="header-controls">
+                    <div class="freshness-badge" id="freshness">
+                        <span class="freshness-dot"></span>
+                        <span class="freshness-text">Loading...</span>
+                    </div>
+                    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                        <span id="theme-icon">&#9790;</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filter-bar" id="filters"></div>
+
+            <!-- Search -->
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Search nodes..." oninput="onSearch(this.value)">
+            </div>
+
+            <!-- SVG Graph -->
+            <svg id="graph"></svg>
+
+            <!-- Loading State -->
+            <div class="dashboard-state" id="state-loading">
+                <div class="spinner"></div>
+                <p class="state-text">Loading data...</p>
+            </div>
+
+            <!-- Error State -->
+            <div class="dashboard-state hidden" id="state-error">
+                <p class="state-error">Failed to load data</p>
+                <p class="state-hint" id="error-detail"></p>
+                <button class="retry-btn" onclick="loadData()">Retry</button>
+            </div>
+
+            <!-- Empty State -->
+            <div class="dashboard-state hidden" id="state-empty">
+                <p class="state-text">No data available</p>
+                <p class="state-hint">Check your data source or adjust filters.</p>
+            </div>
+        </div>
+
+        <!-- Detail Sidebar -->
+        <div class="detail-sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h3 id="sidebar-title">Details</h3>
+                <button class="sidebar-close" onclick="closeSidebar()">&times;</button>
+            </div>
+            <div class="sidebar-body" id="sidebar-body">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ── Configuration ────────────────────────────────────────
+    // CUSTOMIZE: Replace with your data schema and settings
+    const CONFIG = {
+        // Node type → color mapping
+        colors: {
+            person:  '#58a6ff',
+            project: '#3fb950',
+            concept: '#d29922',
+            tool:    '#f78166',
+            default: '#8b949e'
+        },
+        // Node size range [min, max] — scaled by node.weight
+        sizeRange: [5, 18],
+        // Force simulation parameters
+        force: {
+            charge: -120,
+            linkDistance: 80,
+            centerStrength: 0.05
+        }
+    };
+
+    // ── Sample Data ──────────────────────────────────────────
+    // CUSTOMIZE: Replace with your fetchData() implementation
+    function fetchData() {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve({
+                    nodes: [
+                        { id: 'n1', label: 'Alice',   type: 'person',  weight: 5, description: 'Team lead for frontend' },
+                        { id: 'n2', label: 'Bob',     type: 'person',  weight: 3, description: 'Backend engineer' },
+                        { id: 'n3', label: 'Charlie', type: 'person',  weight: 4, description: 'Data scientist' },
+                        { id: 'n4', label: 'API',     type: 'project', weight: 8, description: 'REST API service' },
+                        { id: 'n5', label: 'ML',      type: 'project', weight: 6, description: 'Machine learning pipeline' },
+                        { id: 'n6', label: 'React',   type: 'tool',    weight: 7, description: 'Frontend framework' },
+                        { id: 'n7', label: 'Python',  type: 'tool',    weight: 9, description: 'Backend language' },
+                        { id: 'n8', label: 'Design',  type: 'concept', weight: 4, description: 'System design patterns' },
+                    ],
+                    links: [
+                        { source: 'n1', target: 'n4', relation: 'owns' },
+                        { source: 'n1', target: 'n6', relation: 'uses' },
+                        { source: 'n2', target: 'n4', relation: 'contributes' },
+                        { source: 'n2', target: 'n7', relation: 'uses' },
+                        { source: 'n3', target: 'n5', relation: 'owns' },
+                        { source: 'n3', target: 'n7', relation: 'uses' },
+                        { source: 'n4', target: 'n7', relation: 'built-with' },
+                        { source: 'n5', target: 'n7', relation: 'built-with' },
+                        { source: 'n1', target: 'n8', relation: 'studies' },
+                        { source: 'n4', target: 'n8', relation: 'applies' },
+                    ]
+                });
+            }, 600);
+        });
+    }
+
+    // ── State ────────────────────────────────────────────────
+    let simulation, svg, nodeGroup, linkGroup;
+    let graphData = { nodes: [], links: [] };
+    let selectedNode = null;
+    let activeFilters = new Set();
+    let lastUpdated = null;
+
+    // ── Initialize ───────────────────────────────────────────
+    async function loadData() {
+        showState('loading');
+        try {
+            graphData = await fetchData();
+            lastUpdated = new Date();
+
+            if (!graphData.nodes.length) {
+                showState('empty');
+                return;
+            }
+
+            showState(null);
+            buildFilters();
+            renderGraph();
+            updateFreshness();
+        } catch (err) {
+            document.getElementById('error-detail').textContent = err.message;
+            showState('error');
+        }
+    }
+
+    function showState(state) {
+        ['loading', 'error', 'empty'].forEach(s => {
+            const el = document.getElementById(`state-${s}`);
+            el.classList.toggle('hidden', s !== state);
+        });
+    }
+
+    // ── Filters ──────────────────────────────────────────────
+    function buildFilters() {
+        const types = {};
+        graphData.nodes.forEach(n => {
+            types[n.type] = (types[n.type] || 0) + 1;
+        });
+
+        const bar = document.getElementById('filters');
+        bar.innerHTML = '';
+        Object.entries(types).forEach(([type, count]) => {
+            const chip = document.createElement('button');
+            chip.className = 'filter-chip active';
+            chip.innerHTML = `${type}<span class="count">${count}</span>`;
+            chip.onclick = () => toggleFilter(type, chip);
+            bar.appendChild(chip);
+            activeFilters.add(type);
+        });
+    }
+
+    function toggleFilter(type, chip) {
+        if (activeFilters.has(type)) {
+            activeFilters.delete(type);
+            chip.classList.remove('active');
+        } else {
+            activeFilters.add(type);
+            chip.classList.add('active');
+        }
+        applyVisibility();
+    }
+
+    function applyVisibility() {
+        nodeGroup.each(function(d) {
+            const visible = activeFilters.has(d.type);
+            d3.select(this).style('display', visible ? null : 'none');
+        });
+        linkGroup.each(function(d) {
+            const srcVisible = activeFilters.has(d.source.type);
+            const tgtVisible = activeFilters.has(d.target.type);
+            d3.select(this).style('display', (srcVisible && tgtVisible) ? null : 'none');
+        });
+    }
+
+    // ── Search ───────────────────────────────────────────────
+    function onSearch(query) {
+        const q = query.toLowerCase().trim();
+        if (!q) {
+            nodeGroup.classed('highlighted', false).classed('dimmed', false);
+            linkGroup.classed('highlighted', false).classed('dimmed', false);
+            return;
+        }
+
+        const matched = new Set();
+        graphData.nodes.forEach(n => {
+            if (n.label.toLowerCase().includes(q)) matched.add(n.id);
+        });
+
+        nodeGroup.classed('highlighted', d => matched.has(d.id))
+                 .classed('dimmed', d => !matched.has(d.id));
+        linkGroup.classed('dimmed', d => !matched.has(d.source.id) && !matched.has(d.target.id));
+    }
+
+    // ── Graph Rendering ──────────────────────────────────────
+    function renderGraph() {
+        const container = document.querySelector('.chart-area');
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+
+        svg = d3.select('#graph');
+        svg.selectAll('*').remove();
+
+        const g = svg.append('g');
+
+        // Zoom
+        svg.call(d3.zoom()
+            .scaleExtent([0.2, 5])
+            .on('zoom', (event) => g.attr('transform', event.transform))
+        );
+
+        // Size scale
+        const sizeScale = d3.scaleLinear()
+            .domain(d3.extent(graphData.nodes, d => d.weight))
+            .range(CONFIG.sizeRange);
+
+        // Simulation
+        simulation = d3.forceSimulation(graphData.nodes)
+            .force('link', d3.forceLink(graphData.links).id(d => d.id).distance(CONFIG.force.linkDistance))
+            .force('charge', d3.forceManyBody().strength(CONFIG.force.charge))
+            .force('center', d3.forceCenter(width / 2, height / 2).strength(CONFIG.force.centerStrength))
+            .force('collision', d3.forceCollide().radius(d => sizeScale(d.weight) + 2));
+
+        // Links
+        linkGroup = g.append('g')
+            .selectAll('line')
+            .data(graphData.links)
+            .join('line')
+            .attr('class', 'link')
+            .attr('stroke', '#8b949e')
+            .attr('stroke-width', 1.5);
+
+        // Nodes
+        nodeGroup = g.append('g')
+            .selectAll('g')
+            .data(graphData.nodes)
+            .join('g')
+            .attr('class', 'node')
+            .call(d3.drag()
+                .on('start', dragStart)
+                .on('drag', dragging)
+                .on('end', dragEnd)
+            )
+            .on('click', (event, d) => selectNode(d));
+
+        nodeGroup.append('circle')
+            .attr('r', d => sizeScale(d.weight))
+            .attr('fill', d => CONFIG.colors[d.type] || CONFIG.colors.default);
+
+        nodeGroup.append('text')
+            .text(d => d.label)
+            .attr('dx', d => sizeScale(d.weight) + 4)
+            .attr('dy', '0.35em');
+
+        simulation.on('tick', () => {
+            linkGroup
+                .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+            nodeGroup.attr('transform', d => `translate(${d.x},${d.y})`);
+        });
+    }
+
+    // ── Drag ─────────────────────────────────────────────────
+    function dragStart(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x; d.fy = d.y;
+    }
+    function dragging(event, d) { d.fx = event.x; d.fy = event.y; }
+    function dragEnd(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null; d.fy = null;
+    }
+
+    // ── Node Selection & Sidebar ─────────────────────────────
+    function selectNode(d) {
+        selectedNode = d;
+
+        // Highlight
+        const connected = new Set();
+        connected.add(d.id);
+        graphData.links.forEach(l => {
+            if (l.source.id === d.id) connected.add(l.target.id);
+            if (l.target.id === d.id) connected.add(l.source.id);
+        });
+
+        nodeGroup.classed('highlighted', n => n.id === d.id)
+                 .classed('dimmed', n => !connected.has(n.id));
+        linkGroup.classed('highlighted', l => l.source.id === d.id || l.target.id === d.id)
+                 .classed('dimmed', l => l.source.id !== d.id && l.target.id !== d.id);
+
+        // Populate sidebar
+        document.getElementById('sidebar-title').textContent = d.label;
+
+        const body = document.getElementById('sidebar-body');
+        // CUSTOMIZE: Add your detail fields here
+        const connections = graphData.links
+            .filter(l => l.source.id === d.id || l.target.id === d.id)
+            .map(l => {
+                const other = l.source.id === d.id ? l.target : l.source;
+                return { label: other.label, relation: l.relation, id: other.id };
+            });
+
+        body.innerHTML = `
+            <div class="detail-field">
+                <span class="detail-label">Type</span>
+                <span class="detail-badge">${d.type}</span>
+            </div>
+            <div class="detail-field">
+                <span class="detail-label">Weight</span>
+                <span class="detail-value">${d.weight}</span>
+            </div>
+            <div class="detail-field">
+                <span class="detail-label">Description</span>
+                <span class="detail-value">${d.description || '—'}</span>
+            </div>
+            <div class="detail-field">
+                <span class="detail-label">Connections (${connections.length})</span>
+                <ul class="connections-list">
+                    ${connections.map(c =>
+                        `<li onclick="selectNodeById('${c.id}')">${c.label} <span style="color:var(--dash-text-muted);font-size:0.7rem">${c.relation}</span></li>`
+                    ).join('')}
+                </ul>
+            </div>
+        `;
+
+        document.getElementById('sidebar').classList.add('open');
+    }
+
+    function selectNodeById(id) {
+        const node = graphData.nodes.find(n => n.id === id);
+        if (node) selectNode(node);
+    }
+
+    function closeSidebar() {
+        document.getElementById('sidebar').classList.remove('open');
+        nodeGroup.classed('highlighted', false).classed('dimmed', false);
+        linkGroup.classed('highlighted', false).classed('dimmed', false);
+        selectedNode = null;
+    }
+
+    // ── Theme ────────────────────────────────────────────────
+    function toggleTheme() {
+        const root = document.documentElement;
+        const current = root.getAttribute('data-theme');
+        const next = current === 'light' ? 'dark' : 'light';
+        root.setAttribute('data-theme', next);
+        document.getElementById('theme-icon').innerHTML = next === 'light' ? '&#9728;' : '&#9790;';
+    }
+
+    // ── Freshness ────────────────────────────────────────────
+    function updateFreshness() {
+        if (!lastUpdated) return;
+        const diff = Math.floor((new Date() - lastUpdated) / 1000);
+        const dot = document.querySelector('#freshness .freshness-dot');
+        const text = document.querySelector('#freshness .freshness-text');
+
+        let label, cls;
+        if (diff < 60) { label = `${diff}s ago`; cls = 'fresh'; }
+        else if (diff < 3600) { label = `${Math.floor(diff / 60)}m ago`; cls = diff < 300 ? 'fresh' : 'aging'; }
+        else { label = `${Math.floor(diff / 3600)}h ago`; cls = 'stale'; }
+
+        dot.className = `freshness-dot ${cls}`;
+        text.textContent = `Updated ${label}`;
+    }
+
+    setInterval(updateFreshness, 10000);
+
+    // ── Keyboard Shortcuts ───────────────────────────────────
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeSidebar();
+        if (e.key === '/' && e.target.tagName !== 'INPUT') {
+            e.preventDefault();
+            document.getElementById('search-input').focus();
+        }
+    });
+
+    // ── Window Resize ────────────────────────────────────────
+    window.addEventListener('resize', () => {
+        if (simulation) {
+            const container = document.querySelector('.chart-area');
+            simulation.force('center', d3.forceCenter(container.clientWidth / 2, container.clientHeight / 2));
+            simulation.alpha(0.3).restart();
+        }
+    });
+
+    // ── Start ────────────────────────────────────────────────
+    loadData();
+    </script>
+</body>
+</html>
