@@ -50,7 +50,18 @@ require_memory_dir() {
 qmd_cmd() {
   # Ensure Node runtime (Bun's sqlite doesn't support extensions)
   unset BUN_INSTALL 2>/dev/null || true
-  command qmd "$@"
+
+  # Prefer the Node binary next to the qmd executable. Cameron's machine can
+  # have a broken Homebrew node earlier in PATH, while qmd is installed under
+  # nvm with a working Node runtime.
+  local qmd_bin qmd_dir
+  qmd_bin="$(command -v qmd)"
+  qmd_dir="$(dirname "$qmd_bin")"
+  if [ -x "$qmd_dir/node" ]; then
+    PATH="$qmd_dir:$PATH" command qmd "$@"
+  else
+    command qmd "$@"
+  fi
 }
 
 qmd_setup() {

@@ -59,7 +59,8 @@ letta/                   # Letta product ecosystem
 ├── fleet-management/    # Managing multiple agents
 ├── importing-chatgpt-memory/ # Review ChatGPT exports before writing Letta memory
 ├── letta-api-client/    # Building apps with Letta SDK (Python/TypeScript)
-└── letta-configuration/ # Model and provider configuration
+├── letta-configuration/ # Model and provider configuration
+└── letta-filesystem-to-memfs/ # Deprecated Filesystem to MemFS/QMD migration
 
 tools/                       # General tool integrations
 ├── 1password/               # 1Password CLI integration
@@ -111,6 +112,7 @@ meta/                        # Skills about the skill system
 - **importing-chatgpt-memory** - Reviewing ChatGPT exports by rendering conversations into readable markdown before importing durable memory into Letta
 - **letta-api-client** - Building applications with the Letta API using the Python and TypeScript SDKs (agents, tools, memory, multi-user patterns)
 - **letta-configuration** - Configure LLM models and providers for Letta agents and servers
+- **letta-filesystem-to-memfs** - Migrate deprecated Letta Filesystem folders/files to MemFS markdown corpora with chunking, lexical search, and QMD semantic search
 
 ### Tools
 
