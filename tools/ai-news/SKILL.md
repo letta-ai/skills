@@ -10,7 +10,7 @@ Fetch recent AI news from RSS feeds and YouTube channel feeds, then synthesize i
 ## Setup (one-time)
 
 ```bash
-cd ~/.letta/skills/ai-news/scripts && npm install
+cd ~/.letta/skills/tools/ai-news/scripts && npm install
 ```
 
 ## Workflow
