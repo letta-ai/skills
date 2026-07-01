@@ -18,7 +18,11 @@ In hosted sandboxes, attached repositories are cloned next to the agent's memory
 
 ## Authentication
 
-Set `LETTA_API_KEY` for a user or service account in the organization that owns the target agent/repositories:
+Set `LETTA_API_KEY` for a user or service account in the organization that owns the target agent/repositories.
+
+For Letta Code agents, ask the user to add `LETTA_API_KEY` as an agent secret. Then use `$LETTA_API_KEY` literally in shell commands; Letta Code substitutes the secret value at execution time and redacts it from tool output. Do not ask the user to paste the raw key into chat.
+
+For non-Letta-Code environments, export it normally:
 
 ```bash
 export LETTA_API_KEY="..."
@@ -383,7 +387,7 @@ python letta_repos.py write repo-api-... notes/todo.md $'- item 1\n'
 
 ## Recommended agent workflow
 
-1. Check auth: verify `LETTA_API_KEY` is set; ask the user for the correct organization key if not.
+1. Check auth: verify `LETTA_API_KEY` is available. In Letta Code, ask the user to add it as an agent secret, then use `$LETTA_API_KEY` in commands so it is substituted at execution time.
 2. Identify self: use `LETTA_AGENT_ID` when available.
 3. List attached repositories: `GET /v1/agents/{agent_id}/repositories`.
 4. If the needed repository is not attached, list org repositories and attach by ID.
