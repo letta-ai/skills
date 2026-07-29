@@ -17,7 +17,7 @@ Usage:
     python3 consortium.py \
         --topic "..." \
         --agent "alice:copilot.exe" \
-        --agent "bob:letta-acp --yolo" \
+        --agent "bob:glm:letta-acp --yolo" \
         --max-messages 5
 
     # Interactive mode (human participates):
@@ -60,12 +60,17 @@ def load_config(config_path: str | None = None) -> dict:
             name: Bob
             command: letta-acp
             args: ["--yolo"]
+            model: glm          # optional model override (passed as LETTA_ACP_MODEL)
             env:
               LETTA_ACP_BACKEND: remote
               LETTA_AGENT_ID: agent-xxx
               LETTA_APP_SERVER_URL: ws://127.0.0.1:14601
 
     Config format (JSON): same structure as above.
+
+    The optional `model` field sets the model for the agent's session. For
+    letta-acp, this is passed as the LETTA_ACP_MODEL env var. Different agents
+    can use different models (e.g. one on GLM, another on GPT-4o).
 
     If no config file, returns empty dict (agents must be provided via --agent flags).
     """
@@ -89,20 +94,34 @@ def load_config(config_path: str | None = None) -> dict:
 
 
 def parse_agent_flag(flag: str) -> dict:
-    """Parse --agent flag: 'name:command arg1 arg2' → {id, name, command, args}."""
-    parts = flag.split(':', 1)
-    if len(parts) != 2:
-        print(f"Error: --agent must be 'name:command'. Got: {flag}", file=sys.stderr)
+    """Parse --agent flag: 'name:command arg1 arg2' or 'name:model:command arg1 arg2'.
+
+    Examples:
+        'alice:copilot.exe'           → {id: alice, command: copilot.exe}
+        'bob:glm:letta-acp --yolo'    → {id: bob, command: letta-acp, model: glm}
+    """
+    parts = flag.split(':', 2)
+    if len(parts) < 2:
+        print(f"Error: --agent must be 'name:command' or 'name:model:command'. Got: {flag}", file=sys.stderr)
         sys.exit(1)
 
     name = parts[0].strip()
-    cmd_parts = parts[1].strip().split()
+
+    if len(parts) == 3:
+        # name:model:command format
+        model = parts[1].strip() or None
+        cmd_parts = parts[2].strip().split()
+    else:
+        # name:command format
+        model = None
+        cmd_parts = parts[1].strip().split()
 
     return {
         "id": name.lower(),
         "name": name,
         "command": cmd_parts[0],
         "args": cmd_parts[1:] if len(cmd_parts) > 1 else [],
+        "model": model,
         "env": {},
         "cwd": os.path.expanduser("~"),
     }
@@ -124,6 +143,7 @@ class ACPAgent:
         self.args = config.get("args", [])
         self.env_vars = config.get("env", {})
         self.cwd = config.get("cwd", os.path.expanduser("~"))
+        self.model = config.get("model")  # optional model override
 
         self.process: asyncio.subprocess.Process | None = None
         self.session_id: str | None = None
@@ -137,6 +157,10 @@ class ACPAgent:
             **os.environ,
             **self.env_vars,
         }
+
+        # Inject model override if specified (letta-acp reads LETTA_ACP_MODEL)
+        if self.model:
+            env["LETTA_ACP_MODEL"] = self.model
 
         # Build the command (binary + args)
         full_cmd = [self.command] + self.args
@@ -739,8 +763,8 @@ Examples:
   # With config file:
   consortium.py --topic "Design the API" --config agents.yaml
 
-  # With explicit agents (name:command):
-  consortium.py --topic "..." --agent "alice:copilot.exe" --agent "bob:claude"
+  # With explicit agents (name:command or name:model:command):
+  consortium.py --topic "..." --agent "alice:copilot.exe" --agent "bob:glm:letta-acp --yolo"
 
   # Interactive (human participates):
   consortium.py --topic "..." --config agents.yaml --interactive

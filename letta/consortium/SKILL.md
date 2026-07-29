@@ -1,14 +1,9 @@
----
-name: consortium
-description: Run structured multi-agent group conversations via raw ACP (Agent Client Protocol). Agents discuss topics together, react to each other's messages, and reach consensus. Agent-agnostic — works with Letta Code, Claude Code, Copilot CLI, or any ACP-compatible agent. Use when you hear "consortium", "group conversation", "multi-agent discussion", "agent roundtable", or "agent council".
-license: MIT
+---description: Consortium — ACP-native multi-agent living group chat. Agents talk to each other autonomously via raw ACP (JSON-RPC over stdio). Agent-agnostic — works with any ACP-compatible agent (Letta, Claude Code, Copilot CLI).
 ---
 
 # Consortium
 
-ACP-native multi-agent living group chat. Agents talk to each other autonomously via raw ACP (JSON-RPC 2.0 over stdio). Each agent gets its own ACP session — they see each other's messages, decide whether to respond, and participate in a living discussion with configurable message quotas.
-
-**Agent-agnostic** — works with any ACP-compatible agent (Letta Code, Claude Code, Copilot CLI, or any tool implementing the ACP spec). No Letta-specific dependencies.
+Run a structured multi-agent consortium conversation among your agents. Agents see each other's messages, decide whether to respond, and participate in a living discussion with configurable message quotas.
 
 ## When to Use
 
@@ -22,7 +17,6 @@ ACP-native multi-agent living group chat. Agents talk to each other autonomously
 1. **ACP-compatible agents** running and accessible
 2. **Agent config file** (`agents.yaml` or `agents.json`) defining each agent's command, env, and connection details
 3. **PyYAML** (optional, for YAML configs): `pip install pyyaml`
-4. **Python 3.11+**
 
 ## Quick Start
 
@@ -37,7 +31,7 @@ python3 consortium.py \
     --config agents.yaml \
     --max-messages 5
 
-# 3. Interactive mode (you participate via stdin)
+# 3. Interactive mode (you participate)
 python3 consortium.py \
     --topic "Review the deployment plan" \
     --config agents.yaml \
@@ -53,6 +47,7 @@ agents:
     name: Alice
     command: letta-acp
     args: ["--yolo"]
+    model: glm          # optional: model override (passed as LETTA_ACP_MODEL)
     env:
       LETTA_ACP_BACKEND: remote
       LETTA_AGENT_ID: agent-xxxx
@@ -63,6 +58,7 @@ agents:
     name: Bob
     command: claude
     args: []
+    model: gpt-4o       # different model per agent
     env: {}
     cwd: /home/user
 ```
@@ -71,13 +67,12 @@ agents:
 
 **Inline** (no config file):
 ```bash
+# name:command or name:model:command
 python3 consortium.py \
     --topic "..." \
-    --agent "alice:letta-acp --yolo" \
+    --agent "alice:glm:letta-acp --yolo" \
     --agent "bob:claude"
 ```
-
-See `agents.example.yaml` for a complete reference config.
 
 ## How It Works
 
@@ -94,8 +89,8 @@ See `agents.example.yaml` for a complete reference config.
 | Flag | Description | Default |
 |------|-------------|---------|
 | `--topic` | Discussion topic (required) | — |
-| `--config` | Agent config file (YAML or JSON) | — |
-| `--agent` | Agent in `name:command` format (repeatable) | — |
+| `--config` | Agent config file (YAML/JSON) | — |
+| `--agent` | Agent in `name:command` or `name:model:command` format (repeatable) | — |
 | `--max-messages` | Max messages per agent | 5 |
 | `--initiator` | Who started the discussion | Human |
 | `--interactive` | Human can type messages during discussion | false |
@@ -109,7 +104,7 @@ Consortium works with ANY agent that implements the [Agent Client Protocol](http
 - GitHub Copilot CLI
 - Any custom ACP implementation
 
-No Letta-specific dependencies. Pure ACP protocol. The config specifies which binary to spawn and what env to pass.
+No Letta-specific dependencies. Pure ACP protocol.
 
 ## Full Tool Access
 
@@ -120,8 +115,3 @@ Agents have full Bash/Read/Write tool access during consortium. They can:
 - Make real changes during the discussion
 
 Permission requests are auto-approved (unrestricted mode).
-
-## Bundled Resources
-
-- `consortium.py` — The main script. Run it directly with Python 3.11+.
-- `agents.example.yaml` — Example agent configuration. Copy to `agents.yaml` and customize.

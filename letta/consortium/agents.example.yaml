@@ -4,24 +4,31 @@
 
 agents:
   # Example: Letta Code agents (via letta-acp)
+  # The optional `model` field overrides the agent's default model.
+  # Different agents can use different models.
   - id: alice
     name: Alice
     command: letta-acp
     args: ["--yolo"]
+    model: glm          # optional: model override (passed as LETTA_ACP_MODEL)
     env:
       LETTA_ACP_BACKEND: remote
       LETTA_AGENT_ID: agent-xxxx
       LETTA_APP_SERVER_URL: ws://127.0.0.1:14601
+      # letta-acp may need this for WebSocket support:
+      NODE_OPTIONS: "--experimental-websocket"
     cwd: /home/user
 
   - id: bob
     name: Bob
     command: letta-acp
     args: ["--yolo"]
+    model: gpt-4o       # different model for this agent
     env:
       LETTA_ACP_BACKEND: remote
       LETTA_AGENT_ID: agent-yyyy
       LETTA_APP_SERVER_URL: ws://127.0.0.1:14602
+      NODE_OPTIONS: "--experimental-websocket"
     cwd: /home/user
 
   # Example: Claude Code agent
