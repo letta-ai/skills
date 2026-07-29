@@ -913,16 +913,11 @@ class Consortium:
                 continue
 
             # Regular message — broadcast (already verified no missed messages)
-            # Design #10: re-composes consume quota since they cost real LLM calls
             actual_response = message if message else response
-            # First compose costs 1 quota. Each re-compose costs 1 additional.
-            total_cost = 1 + recompose_count
-            self.quotas[aid] -= total_cost
+            self.quotas[aid] -= 1  # One message sent = one quota consumed
             self.passed.discard(aid)
             await self.broadcast(aid, actual_response)
             self.last_said[aid] = actual_response
-            if recompose_count > 0:
-                self.log(f"  {name}: broadcast after {recompose_count} re-compose(s) (quota cost: {total_cost})")
 
             if self.quotas[aid] <= 0:
                 self.log(f"  {name} is out of messages")
