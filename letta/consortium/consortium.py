@@ -396,23 +396,24 @@ class ACPAgent:
         Handles str, dict, array, and nested content structures (L4).
         """
         content = update.get("content", "")
-        return self._extract_text_recursive(content)
+        return self._extract_text_recursive(content, 0)
 
-    def _extract_text_recursive(self, content) -> str:
+    def _extract_text_recursive(self, content, depth: int = 0) -> str:
         """Recursively extract text from content of any type (L4)."""
+        if depth > 20:  # L1: prevent stack overflow from deeply nested content
+            return ""
         if isinstance(content, str):
             return content
         if isinstance(content, dict):
-            # Could be {"text": "..."} or a nested structure with "content"
             if "text" in content:
                 return content["text"]
             if "content" in content:
-                return self._extract_text_recursive(content["content"])
+                return self._extract_text_recursive(content["content"], depth + 1)
             return ""
         if isinstance(content, list):
             parts = []
             for block in content:
-                parts.append(self._extract_text_recursive(block))
+                parts.append(self._extract_text_recursive(block, depth + 1))
             return "".join(parts)
         return ""
 
@@ -439,7 +440,7 @@ class ACPAgent:
         except asyncio.TimeoutError:  # L5: removed dead QueueEmpty catch
             pass
 
-    async def prompt(self, text: str, on_event=None) -> str:
+    async def prompt(self, text: str, on_event=None, timeout: float = 300) -> str:
         """Send a prompt and collect the response. Returns the full response text.
 
         Per ACP spec: the session/prompt response may arrive immediately (before
@@ -474,7 +475,7 @@ class ACPAgent:
             done = False
 
             # M4: use loop.time() instead of get_event_loop().time()
-            deadline = loop.time() + 300  # 5 min hard cap
+            deadline = loop.time() + timeout  # M1: use caller's timeout, not hardcoded
             while not done:
                 remaining = deadline - loop.time()
                 if remaining <= 0:
@@ -1029,7 +1030,9 @@ class Consortium:
         )
 
         tasks = []
-        reflect_agents = list(self.acp_agents.items())
+        # M2: Skip agents whose subprocesses have died
+        reflect_agents = [(aid, agent) for aid, agent in self.acp_agents.items()
+                          if agent.process and agent.process.returncode is None]
         for aid, agent in reflect_agents:
             name = self.name(aid)
             tasks.append(self._reflect(aid, agent, name, reflection_prompt))
@@ -1163,6 +1166,8 @@ Examples:
         if lower_id not in seen:
             seen.add(lower_id)
             unique_configs.append(c)
+        else:
+            print(f"Warning: duplicate agent ID '{lower_id}' — ignoring", file=sys.stderr)
     agent_configs = unique_configs
 
     c = Consortium(args.topic, agent_configs, args.max_messages,
