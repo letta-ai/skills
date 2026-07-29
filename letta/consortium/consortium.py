@@ -871,7 +871,7 @@ class Consortium:
                 line_bytes = await asyncio.to_thread(os.read, sys.stdin.fileno(), 65536)
                 if not line_bytes:
                     break
-                line = line_bytes.decode().strip()
+                line = line_bytes.decode(errors="replace").strip()  # I1: consistent with M7
                 if line == "/end":
                     self.ending = True
                     break
