@@ -16,7 +16,7 @@ agents:
     env:
       LETTA_ACP_BACKEND: remote
       LETTA_AGENT_ID: agent-xxxx
-      LETTA_APP_SERVER_URL: ws://127.0.0.1:14601
+      LETTA_APP_SERVER_URL: ws://127.0.0.1:XXXXX
       # letta-acp may need this for WebSocket support:
       NODE_OPTIONS: "--experimental-websocket"
     cwd: /home/user
@@ -31,7 +31,7 @@ agents:
     env:
       LETTA_ACP_BACKEND: remote
       LETTA_AGENT_ID: agent-yyyy
-      LETTA_APP_SERVER_URL: ws://127.0.0.1:14602
+      LETTA_APP_SERVER_URL: ws://127.0.0.1:YYYYY
       NODE_OPTIONS: "--experimental-websocket"
     cwd: /home/user
 
