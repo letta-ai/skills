@@ -250,9 +250,9 @@ class ACPAgent:
         # Initialize ACP protocol with capability negotiation
         result = await self._call("initialize", {
             "protocolVersion": 1,
-            "clientCapabilities": {  # H1: correct spec types
-                "fs": {"readTextFile": True, "writeTextFile": True},
-                "terminal": {},
+            "clientCapabilities": {  # M5: we don't implement fs/terminal handlers
+                "fs": {"readTextFile": False, "writeTextFile": False},
+                "terminal": False,
             },
             "clientInfo": _CLIENT_INFO,  # M10
         }, timeout=30)
@@ -264,6 +264,8 @@ class ACPAgent:
                   f"expected 1", file=sys.stderr)
 
         # Create session — C3: default to acceptEdits, unrestricted only with --unsafe
+        # L4: permissionMode is a letta-acp extension, not in ACP v1 spec.
+        # Spec-compliant agents may ignore it. Session will work regardless.
         permission_mode = "unrestricted" if self.unsafe else "acceptEdits"
         result = await self._call("session/new", {
             "mcpServers": [],
@@ -286,7 +288,7 @@ class ACPAgent:
                 if len(line) > _MAX_LINE_SIZE:
                     print(f"[{self.name}] Warning: skipping oversized line ({len(line)} bytes)", file=sys.stderr)
                     continue
-                line = line.decode().strip()
+                line = line.decode(errors="replace").strip()  # M7: survive bad bytes
                 if not line:
                     continue
                 try:
@@ -330,13 +332,17 @@ class ACPAgent:
             options = params.get("options", [])
             for opt in options:
                 if opt.get("kind") in ("allow_always", "allow_once"):
-                    await self._send({"jsonrpc": "2.0", "id": msg_id,
-                               "result": {"outcome": {"outcome": "selected", "optionId": opt["optionId"]}}})
-                    return
+                    opt_id = opt.get("optionId")  # M6: use .get() to avoid KeyError
+                    if opt_id:
+                        await self._send({"jsonrpc": "2.0", "id": msg_id,
+                                   "result": {"outcome": {"outcome": "selected", "optionId": opt_id}}})
+                        return
             if options:
-                await self._send({"jsonrpc": "2.0", "id": msg_id,
-                           "result": {"outcome": {"outcome": "selected", "optionId": options[0]["optionId"]}}})
-                return
+                opt_id = options[0].get("optionId")  # M6
+                if opt_id:
+                    await self._send({"jsonrpc": "2.0", "id": msg_id,
+                               "result": {"outcome": {"outcome": "selected", "optionId": opt_id}}})
+                    return
             # H9: Empty options for permission request — deny, don't return method-not-found
             await self._send({"jsonrpc": "2.0", "id": msg_id,
                        "result": {"outcome": {"outcome": "denied"}}})
@@ -415,11 +421,8 @@ class ACPAgent:
         if not self.session_id or not self.process or self.process.returncode is not None:
             return
 
-        # H3: Deny all pending permission requests before cancel
-        for msg_id, fut in list(self._pending.items()):
-            if not fut.done():
-                await self._send({"jsonrpc": "2.0", "id": msg_id,
-                           "result": {"outcome": {"outcome": "cancelled"}}})
+        # M3: Removed invalid loop — _pending contains client request futures,
+        # not agent permission request IDs. session/cancel is the correct mechanism.
 
         try:
             await self._send({
@@ -433,7 +436,7 @@ class ACPAgent:
         # H4: Wait briefly for idle state_update
         try:
             await asyncio.wait_for(self._notif_queue.get(), timeout=3.0)
-        except (asyncio.TimeoutError, asyncio.QueueEmpty):
+        except asyncio.TimeoutError:  # L5: removed dead QueueEmpty catch
             pass
 
     async def prompt(self, text: str, on_event=None) -> str:
@@ -581,7 +584,7 @@ def _is_pass(response: str) -> bool:
     Handles markdown-formatted PASS (L1).
     """
     stripped = _strip_markdown(response.strip()).strip().upper()
-    return stripped in ("PASS", "PASS.", "PASS:", "PASS!", "PASS-")
+    return stripped in ("PASS", "PASS.", "PASS:", "PASS!", "PASS-", "PASS,", "PASS;")  # L6
 
 
 def _extract_message_from_pass(response: str) -> tuple[str | None, bool]:
@@ -630,6 +633,7 @@ class Consortium:
         self.queues: dict[str, asyncio.Queue] = {aid: asyncio.Queue() for aid, _ in self.agents}
         self.quotas: dict[str, int] = {aid: max_messages for aid, _ in self.agents}
         self.passed: set[str] = set()
+        self.prev_passed: set[str] = set()  # M8: snapshot for update_prompt context
         self.active: set[str] = set()
         self.last_said: dict[str, str | None] = {aid: None for aid, _ in self.agents}
 
@@ -638,6 +642,7 @@ class Consortium:
         self.ending = False
         self.transcript_path: Path | None = None
         self._started_agents: set[str] = set()  # L7: replace monkey-patching
+        self._start_time: datetime | None = None  # L2: capture actual start time
 
     def name(self, aid: str) -> str:
         for agent_id, name in self.agents:
@@ -707,7 +712,7 @@ class Consortium:
 
         if self.last_said.get(aid):
             last_context = f'Your last message was delivered to the group: "{self.last_said[aid]}"\n\n'
-        elif aid in self.passed:
+        elif aid in self.prev_passed:  # M8: use snapshot from last cycle
             last_context = "You passed in the previous round.\n\n"
         else:
             last_context = ""
@@ -782,6 +787,7 @@ class Consortium:
         except ACPError as e:
             self.log(f"  {name} error: {e}")
             self.passed.add(aid)
+            self.active.discard(aid)  # M2: dead agent — remove from active
             return
 
         response = response.strip()
@@ -797,6 +803,7 @@ class Consortium:
             self.quotas[aid] -= 1
             self.passed.discard(aid)
             await self.broadcast(aid, message)
+            self.last_said[aid] = message  # M1: track what was said
             self.passed.add(aid)
             self.log(f"  {name}: (spoke then PASS)")
             await self.broadcast(aid, "said their piece, then passed", "pass")
@@ -826,6 +833,7 @@ class Consortium:
                         self.quotas[aid] -= 1
                         self.passed.discard(aid)
                         await self.broadcast(aid, rev_msg)
+                        self.last_said[aid] = rev_msg  # M1
                     self.passed.add(aid)
                     if not rev_msg:
                         await self.broadcast(aid, "explicitly passed", "pass")
@@ -846,6 +854,7 @@ class Consortium:
         self.quotas[aid] -= 1
         self.passed.discard(aid)
         await self.broadcast(aid, actual_response)
+        self.last_said[aid] = actual_response  # M1: track what was said
 
         if self.quotas[aid] <= 0:
             self.log(f"  {name} is out of messages")
@@ -857,9 +866,9 @@ class Consortium:
         loop = asyncio.get_running_loop()
         while not self.ending:
             try:
-                # C1: Use asyncio.to_thread with stdin.fileno() + os.read
-                # This uses a daemon thread and doesn't block shutdown
-                line_bytes = await loop.run_in_executor(None, lambda: os.read(sys.stdin.fileno(), 65536))
+                # C1/L7: Use asyncio.to_thread (daemon thread) with os.read.
+                # os.read on fileno() is interruptible by closing stdin.
+                line_bytes = await asyncio.to_thread(os.read, sys.stdin.fileno(), 65536)
                 if not line_bytes:
                     break
                 line = line_bytes.decode().strip()
@@ -884,8 +893,12 @@ class Consortium:
         if not self.active:
             self.log("No agents available. Exiting.")
             return
+        if len(self.active) < 2:  # M4: need at least 2 agents for discussion
+            self.log("Need at least 2 active agents. Exiting.")
+            return
 
         self.log(f"\nStarting consortium: {self.topic}")
+        self._start_time = datetime.now()  # L2: capture actual start
         self.log(f"Agents: {', '.join(self.name(aid) for aid, _ in self.agents if aid in self.active)}")
         self.log(f"Max messages per agent: {self.max_messages}\n")
 
@@ -922,6 +935,7 @@ class Consortium:
                 if not has_quota:
                     break
 
+            self.prev_passed = set(self.passed)  # M8: snapshot before clearing
             self.passed.clear()
 
             if not has_pending and not has_quota:
@@ -1021,11 +1035,12 @@ class Consortium:
             self.transcript_path = d / f"{ts}-{slug}.md"
 
             now_str = now.strftime('%Y-%m-%d %H:%M:%S')
+            start_str = self._start_time.strftime('%Y-%m-%d %H:%M:%S') if self._start_time else now_str  # L2
             lines = [
                 f"# Consortium: {self.topic}",
                 f"**Participants:** {', '.join(name for _, name in self.agents)}",
                 f"**Transport:** ACP (raw JSON-RPC over stdio)",
-                f"**Started:** {now_str}",
+                f"**Started:** {start_str}",  # L2: use actual start time
                 f"**Max messages per agent:** {self.max_messages}",
                 "", "---", "",
             ]
@@ -1095,7 +1110,11 @@ Examples:
 
     if args.config:
         config = load_config(args.config)
-        agent_configs.extend(config.get("agents", []))
+        agents_from_config = config.get("agents", [])
+        if not isinstance(agents_from_config, list):  # L3: validate type
+            print(f"Error: 'agents' in config must be a list, got {type(agents_from_config).__name__}", file=sys.stderr)
+            sys.exit(1)
+        agent_configs.extend(agents_from_config)
 
     for flag in args.agent:
         agent_configs.append(parse_agent_flag(flag))
