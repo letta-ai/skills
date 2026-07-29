@@ -9,19 +9,22 @@ JSON-RPC 2.0 over stdio. Agent-agnostic — works with ANY ACP-compatible agent
 
 Usage:
     # With a config file (recommended):
-    python3 consortium.py \\
-        --topic "How should we organize the build system?" \\
+    python3 consortium.py \
+        --topic "How should we organize the build system?" \
         --config agents.yaml
 
     # With explicit agent flags:
-    python3 consortium.py \\
-        --topic "..." \\
-        --agent "alice:copilot.exe" \\
-        --agent "bob:letta-acp --yolo" \\
+    python3 consortium.py \
+        --topic "..." \
+        --agent "alice:copilot.exe" \
+        --agent "bob:letta-acp --yolo" \
         --max-messages 5
 
     # Interactive mode (human participates):
     python3 consortium.py --topic "..." --config agents.yaml --interactive
+
+    # Unsafe mode (unrestricted agent permissions):
+    python3 consortium.py --topic "..." --config agents.yaml --unsafe
 """
 
 import argparse
@@ -41,13 +44,24 @@ except ImportError:
     HAS_YAML = False
 
 
-# Env vars that model_env will refuse to set (security: #4 from review)
+# Maximum line size for JSON-RPC messages (DoS protection, L3)
+_MAX_LINE_SIZE = 10 * 1024 * 1024  # 10 MB
+
+# Env vars blocked from both model_env AND env config (security, C2/C4 from R1)
 _BLOCKED_ENV_VARS = frozenset({
     "LD_PRELOAD", "LD_LIBRARY_PATH", "DYLD_INSERT_LIBRARIES",
     "PATH", "PYTHONPATH", "PYTHONSTARTUP",
     "SHELL", "BASH_ENV", "ENV",
     "SYSTEMROOT", "WINDIR",
 })
+
+_VERSION = "1.0.0"
+_CLIENT_INFO = {"name": "consortium", "version": _VERSION}
+
+
+def _filter_env(env_dict: dict) -> dict:
+    """Filter out blocked env vars from a config dict (C2)."""
+    return {k: v for k, v in env_dict.items() if k.upper() not in _BLOCKED_ENV_VARS}
 
 
 # ─── Agent Config ─────────────────────────────────────────────────────────────
@@ -69,8 +83,8 @@ def load_config(config_path: str | None = None) -> dict:
             name: Bob
             command: letta-acp
             args: ["--yolo"]
-            model: glm              # optional model name
-            model_env: LETTA_ACP_MODEL  # env var to inject with model value
+            model: glm
+            model_env: LETTA_ACP_MODEL
             env:
               LETTA_ACP_BACKEND: remote
               LETTA_AGENT_ID: agent-xxx
@@ -79,7 +93,8 @@ def load_config(config_path: str | None = None) -> dict:
 
     The optional `model` field names the model to use. `model_env` specifies
     which environment variable to set with that value. For security, certain
-    dangerous env var names are blocked (PATH, LD_PRELOAD, etc.).
+    dangerous env var names are blocked (PATH, LD_PRELOAD, etc.) in both
+    `model_env` and the general `env` dict.
 
     If no config file, returns empty dict (agents must be provided via --agent flags).
     """
@@ -91,21 +106,25 @@ def load_config(config_path: str | None = None) -> dict:
         print(f"Error: config file not found: {path}", file=sys.stderr)
         sys.exit(1)
 
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")  # L2
 
     if path.suffix in ('.yaml', '.yml'):
         if not HAS_YAML:
             print("Error: PyYAML not installed. Install with: pip install pyyaml", file=sys.stderr)
             sys.exit(1)
         data = yaml.safe_load(text)
-        if data is None:  # Empty file (#7)
+        if data is None:  # Empty file
             data = {}
-        if not isinstance(data, dict):
+        if not isinstance(data, dict):  # H11: validate structure for YAML
             print(f"Error: config root must be a mapping, got {type(data).__name__}", file=sys.stderr)
             sys.exit(1)
         return data
     else:
-        return json.loads(text)
+        data = json.loads(text)
+        if not isinstance(data, dict):  # H11: validate structure for JSON
+            print(f"Error: config root must be a mapping, got {type(data).__name__}", file=sys.stderr)
+            sys.exit(1)
+        return data
 
 
 def parse_agent_flag(flag: str) -> dict:
@@ -125,6 +144,9 @@ def parse_agent_flag(flag: str) -> dict:
         # Windows path — no name: prefix, use the basename as name
         cmd_parts = flag.split()
         name = Path(cmd_parts[0]).stem
+        if not name:  # M6
+            print(f"Error: could not derive agent name from command. Got: {flag}", file=sys.stderr)
+            sys.exit(1)
         return {
             "id": name.lower(),
             "name": name,
@@ -141,6 +163,10 @@ def parse_agent_flag(flag: str) -> dict:
 
     name = parts[0].strip()
     cmd_parts = parts[1].strip().split()
+
+    if not name or not cmd_parts:  # M6
+        print(f"Error: --agent name and command must be non-empty. Got: {flag}", file=sys.stderr)
+        sys.exit(1)
 
     return {
         "id": name.lower(),
@@ -161,36 +187,33 @@ class ACPError(Exception):
 class ACPAgent:
     """A single ACP agent subprocess with JSON-RPC communication."""
 
-    # Separate ID spaces to avoid collisions (#3)
-    # Client requests use positive IDs, agent requests use negative IDs
+    # Separate ID spaces to avoid collisions (R1 #3)
     _CLIENT_ID_BASE = 1000
-    _AGENT_ID_BASE = -1
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, unsafe: bool = False):
         self.agent_id = config["id"]
         self.name = config.get("name", config["id"])
         self.command = config["command"]
         self.args = config.get("args", [])
-        self.env_vars = config.get("env", {})
+        self.env_vars = _filter_env(config.get("env", {}))  # C2: filter env
         self.cwd = config.get("cwd", os.path.expanduser("~"))
         self.model = config.get("model")
         self.model_env = config.get("model_env")
+        self.unsafe = unsafe  # C3
 
         self.process: asyncio.subprocess.Process | None = None
         self.session_id: str | None = None
 
-        # ID tracking — separate spaces for client vs agent (#3)
+        # ID tracking
         self._next_client_id = self._CLIENT_ID_BASE
-        self._next_agent_id = self._AGENT_ID_BASE
         self._pending: dict[int, asyncio.Future] = {}
-        self._agent_pending: set[int] = set()  # IDs used by agent-initiated requests
 
-        # Init in __init__, not lazily (#21)
-        self._notif_queue: asyncio.Queue = asyncio.Queue()
+        # Init in __init__ (L7)
+        self._notif_queue: asyncio.Queue = asyncio.Queue(maxsize=10000)  # L6
         self._reader_task: asyncio.Task | None = None
 
     def _validate_model_env(self) -> str | None:
-        """Validate model_env is not a dangerous env var (#4)."""
+        """Validate model_env is not a dangerous env var."""
         if not self.model_env:
             return None
         upper = self.model_env.upper()
@@ -207,12 +230,10 @@ class ACPAgent:
             **self.env_vars,
         }
 
-        # Inject model override if model and model_env are both specified and safe (#4)
         safe_env = self._validate_model_env()
         if self.model and safe_env:
             env[safe_env] = self.model
 
-        # Build the command (binary + args)
         full_cmd = [self.command] + self.args
 
         self.process = await asyncio.create_subprocess_exec(
@@ -226,22 +247,28 @@ class ACPAgent:
 
         self._reader_task = asyncio.create_task(self._read_loop())
 
-        # Initialize ACP protocol with capability negotiation (#13)
+        # Initialize ACP protocol with capability negotiation
         result = await self._call("initialize", {
             "protocolVersion": 1,
-            "clientCapabilities": {
-                "fs": True,           # Can read/write files
-                "terminal": True,     # Can execute shell commands
+            "clientCapabilities": {  # H1: correct spec types
+                "fs": {"readTextFile": True, "writeTextFile": True},
+                "terminal": {},
             },
+            "clientInfo": _CLIENT_INFO,  # M10
         }, timeout=30)
 
-        # Create session
+        # H2: Check returned protocol version
+        agent_version = result.get("protocolVersion")
+        if agent_version and agent_version != 1:
+            print(f"[{self.name}] Warning: agent returned protocol version {agent_version}, "
+                  f"expected 1", file=sys.stderr)
+
+        # Create session — C3: default to acceptEdits, unrestricted only with --unsafe
+        permission_mode = "unrestricted" if self.unsafe else "acceptEdits"
         result = await self._call("session/new", {
             "mcpServers": [],
             "cwd": self.cwd,
-            # permissionMode: unrestricted is a letta-acp extension (#12)
-            # Standard ACP uses "acceptEdits" — kept for backward compat
-            "permissionMode": "unrestricted",
+            "permissionMode": permission_mode,
         }, timeout=60)
 
         self.session_id = result.get("sessionId")
@@ -255,6 +282,10 @@ class ACPAgent:
                 line = await self.process.stdout.readline()
                 if not line:
                     break
+                # L3: DoS protection
+                if len(line) > _MAX_LINE_SIZE:
+                    print(f"[{self.name}] Warning: skipping oversized line ({len(line)} bytes)", file=sys.stderr)
+                    continue
                 line = line.decode().strip()
                 if not line:
                     continue
@@ -267,10 +298,7 @@ class ACPAgent:
                 has_method = "method" in msg
                 has_result = "result" in msg or "error" in msg
 
-                # Determine if this is a response to our request, a request from
-                # the agent, or a notification (#3 — separate ID spaces)
                 if msg_id is not None and msg_id in self._pending and not has_method:
-                    # Response to our client request
                     fut = self._pending.pop(msg_id)
                     if not fut.done():
                         if "error" in msg:
@@ -278,21 +306,19 @@ class ACPAgent:
                         else:
                             fut.set_result(msg.get("result", {}))
                 elif msg_id is not None and has_method:
-                    # Request from the agent — track its ID
-                    self._agent_pending.add(msg_id)
                     await self._handle_request(msg)
                 elif has_method:
-                    # Notification (no id) — e.g. session/update
                     await self._handle_notification(msg)
-                elif msg_id is not None and msg_id in self._agent_pending:
-                    # Response from agent to our handler — already handled
-                    self._agent_pending.discard(msg_id)
-                # else: unknown message — ignore silently
-        except (asyncio.CancelledError, ConnectionResetError, BrokenPipeError):  # #6
+                # H6: removed _agent_pending set — not needed, was a memory leak
+        except (asyncio.CancelledError, ConnectionResetError, BrokenPipeError):
             pass
         except Exception as e:
-            # Don't let reader die silently on unexpected errors
             print(f"[{self.name}] reader error: {e}", file=sys.stderr)
+        finally:
+            # C4: Resolve all pending futures with exceptions so callers don't hang
+            for fut in list(self._pending.values()):
+                if not fut.done():
+                    fut.set_exception(ACPError("Connection lost"))
 
     async def _handle_request(self, msg: dict):
         """Handle a request from the agent (permissions, etc.)."""
@@ -311,33 +337,42 @@ class ACPAgent:
                 await self._send({"jsonrpc": "2.0", "id": msg_id,
                            "result": {"outcome": {"outcome": "selected", "optionId": options[0]["optionId"]}}})
                 return
+            # H9: Empty options for permission request — deny, don't return method-not-found
+            await self._send({"jsonrpc": "2.0", "id": msg_id,
+                       "result": {"outcome": {"outcome": "denied"}}})
+            return
 
-        # Unknown method — return method not found error (#19)
+        # Unknown method — return method not found error
         await self._send({"jsonrpc": "2.0", "id": msg_id,
                    "error": {"code": -32601, "message": f"Method not found: {method}"}})
 
     async def _handle_notification(self, msg: dict):
         """Store notifications for the active prompt to consume."""
-        # Validate sessionId on session/update (#17)
         method = msg.get("method", "")
         if method == "session/update":
             params = msg.get("params", {})
             notif_sid = params.get("sessionId")
             if notif_sid and self.session_id and notif_sid != self.session_id:
-                return  # Not for our session — ignore
-        await self._notif_queue.put(msg)
+                return
+        try:
+            self._notif_queue.put_nowait(msg)
+        except asyncio.QueueFull:
+            print(f"[{self.name}] Warning: notification queue full, dropping message", file=sys.stderr)
 
     async def _send(self, msg: dict):
-        """Send a JSON-RPC message to the agent."""
+        """Send a JSON-RPC message to the agent. (H10: handle pipe errors)"""
         data = (json.dumps(msg) + "\n").encode()
-        self.process.stdin.write(data)
-        await self.process.stdin.drain()  # #10 — ensure delivery
+        try:
+            self.process.stdin.write(data)
+            await self.process.stdin.drain()
+        except (BrokenPipeError, ConnectionResetError, RuntimeError):
+            pass  # Process already dead
 
     async def _call(self, method: str, params: dict, timeout: float = 120) -> dict:
         """Send a JSON-RPC request and wait for the result."""
-        req_id = self._next_client_id  # #3 — client ID space
+        req_id = self._next_client_id
         self._next_client_id += 1
-        loop = asyncio.get_running_loop()  # #20 — deprecated get_event_loop
+        loop = asyncio.get_running_loop()
         fut: asyncio.Future = loop.create_future()
         self._pending[req_id] = fut
 
@@ -350,30 +385,42 @@ class ACPAgent:
             raise ACPError(f"Timeout waiting for {method}")
 
     def _extract_text(self, update: dict) -> str:
-        """Extract text from a session/update content field (#2).
+        """Extract text from a session/update content field.
 
-        Handles both object and array content formats.
+        Handles str, dict, array, and nested content structures (L4).
         """
         content = update.get("content", "")
+        return self._extract_text_recursive(content)
+
+    def _extract_text_recursive(self, content) -> str:
+        """Recursively extract text from content of any type (L4)."""
         if isinstance(content, str):
             return content
         if isinstance(content, dict):
-            return content.get("text", "")
+            # Could be {"text": "..."} or a nested structure with "content"
+            if "text" in content:
+                return content["text"]
+            if "content" in content:
+                return self._extract_text_recursive(content["content"])
+            return ""
         if isinstance(content, list):
-            # Array of content blocks
             parts = []
             for block in content:
-                if isinstance(block, dict):
-                    parts.append(block.get("text", ""))
-                elif isinstance(block, str):
-                    parts.append(block)
+                parts.append(self._extract_text_recursive(block))
             return "".join(parts)
         return ""
 
     async def cancel_session(self):
-        """Send session/cancel to stop a running prompt (#5)."""
+        """Send session/cancel to stop a running prompt. (H3/H4)"""
         if not self.session_id or not self.process or self.process.returncode is not None:
             return
+
+        # H3: Deny all pending permission requests before cancel
+        for msg_id, fut in list(self._pending.items()):
+            if not fut.done():
+                await self._send({"jsonrpc": "2.0", "id": msg_id,
+                           "result": {"outcome": {"outcome": "cancelled"}}})
+
         try:
             await self._send({
                 "jsonrpc": "2.0",
@@ -381,97 +428,102 @@ class ACPAgent:
                 "params": {"sessionId": self.session_id},
             })
         except (BrokenPipeError, ConnectionResetError, RuntimeError):
-            pass  # Process already dead
+            pass
+
+        # H4: Wait briefly for idle state_update
+        try:
+            await asyncio.wait_for(self._notif_queue.get(), timeout=3.0)
+        except (asyncio.TimeoutError, asyncio.QueueEmpty):
+            pass
 
     async def prompt(self, text: str, on_event=None) -> str:
-        """
-        Send a prompt and collect the response.
-        Returns the full response text.
+        """Send a prompt and collect the response. Returns the full response text.
 
-        Per ACP spec: the session/prompt response arrives immediately (before
-        content). Content arrives via session/update notifications. We collect
-        updates until we see a 'done' stop reason. (#1)
+        Per ACP spec: the session/prompt response may arrive immediately (before
+        content) or after. Content arrives via session/update notifications.
+        We collect updates until we see a stop reason or the prompt resolves.
         """
         if not self.session_id:
             raise ACPError("No session")
 
-        # Clear any stale notifications
+        # Clear stale notifications
         while not self._notif_queue.empty():
             self._notif_queue.get_nowait()
 
-        # Send session/prompt
         req_id = self._next_client_id
         self._next_client_id += 1
-        loop = asyncio.get_running_loop()  # #20
+        loop = asyncio.get_running_loop()  # M4: fixed from get_event_loop
         prompt_fut: asyncio.Future = loop.create_future()
         self._pending[req_id] = prompt_fut
 
-        await self._send({
-            "jsonrpc": "2.0", "id": req_id,
-            "method": "session/prompt",
-            "params": {
-                "sessionId": self.session_id,
-                "prompt": [{"type": "text", "text": text}],
-            },
-        })
+        try:  # C5: try/finally to clean up prompt_fut
+            await self._send({
+                "jsonrpc": "2.0", "id": req_id,
+                "method": "session/prompt",
+                "params": {
+                    "sessionId": self.session_id,
+                    "prompt": [{"type": "text", "text": text}],
+                },
+            })
 
-        full_text = ""
-        thinking_text = ""
-        done = False
+            full_text = ""
+            thinking_text = ""
+            done = False
 
-        # Collect content from session/update notifications (#1)
-        # The prompt response may arrive immediately (spec-compliant) or after
-        # content (letta-acp). Either way, we collect notifications until done.
-        deadline = asyncio.get_event_loop().time() + 300  # 5 min hard cap
-        while not done:
-            remaining = deadline - asyncio.get_event_loop().time()
-            if remaining <= 0:
-                break
-
-            try:
-                msg = await asyncio.wait_for(self._notif_queue.get(), timeout=min(remaining, 5.0))
-            except asyncio.TimeoutError:
-                # Check if prompt already completed (spec-compliant: response before content)
-                if prompt_fut.done():
+            # M4: use loop.time() instead of get_event_loop().time()
+            deadline = loop.time() + 300  # 5 min hard cap
+            while not done:
+                remaining = deadline - loop.time()
+                if remaining <= 0:
                     break
-                continue
 
-            if msg.get("method") != "session/update":
-                # Check if this is the prompt response arriving as a notification
-                continue
+                try:
+                    msg = await asyncio.wait_for(self._notif_queue.get(), timeout=min(remaining, 5.0))
+                except asyncio.TimeoutError:
+                    if prompt_fut.done():
+                        break
+                    continue
 
-            update = msg.get("params", {}).get("update", {})
-            kind = update.get("sessionUpdate", "")
+                if msg.get("method") != "session/update":
+                    continue
 
-            # Handle both chunked and non-chunked messages (#2)
-            if kind in ("agent_message_chunk", "agent_message"):
-                full_text += self._extract_text(update)
-            elif kind in ("agent_thought_chunk", "agent_thought"):
-                thinking_text += self._extract_text(update)
+                update = msg.get("params", {}).get("update", {})
+                kind = update.get("sessionUpdate", "")
 
-            if on_event:
-                await on_event({"kind": kind, "thinking": thinking_text, "text": full_text, "raw": update})
+                if kind in ("agent_message_chunk", "agent_message"):
+                    full_text += self._extract_text(update)
+                elif kind in ("agent_thought_chunk", "agent_thought"):
+                    thinking_text += self._extract_text(update)
 
-            # Check for stop reason
-            stop_reason = update.get("stopReason")
-            if stop_reason:
-                done = True
+                if on_event:
+                    await on_event({"kind": kind, "thinking": thinking_text, "text": full_text, "raw": update})
 
-        # Resolve the prompt future if not already
-        if not prompt_fut.done():
-            try:
-                result = await asyncio.wait_for(prompt_fut, timeout=5.0)
-                # Some agents return content in the result itself
-                if not full_text and isinstance(result, dict):
-                    full_text = self._extract_text(result)
-            except (asyncio.TimeoutError, ACPError):
-                pass
+                stop_reason = update.get("stopReason")
+                if stop_reason:
+                    if stop_reason in ("error", "refusal"):  # L8: log error stop reasons
+                        print(f"[{self.name}] Warning: agent returned stop reason '{stop_reason}'", file=sys.stderr)
+                    done = True
 
-        return full_text
+            # H5: Check stopReason in prompt response result (ACP v1)
+            if not prompt_fut.done():
+                try:
+                    result = await asyncio.wait_for(prompt_fut, timeout=5.0)
+                    if isinstance(result, dict):
+                        if not full_text:
+                            full_text = self._extract_text(result)
+                        resp_stop = result.get("stopReason")
+                        if resp_stop in ("error", "refusal"):
+                            print(f"[{self.name}] Warning: prompt response stop reason '{resp_stop}'", file=sys.stderr)
+                except (asyncio.TimeoutError, ACPError):
+                    pass
+
+            return full_text
+        finally:
+            # C5: Always clean up prompt_fut
+            self._pending.pop(req_id, None)
 
     async def stop(self):
         """Terminate the agent process."""
-        # Cancel any running session first (#5)
         await self.cancel_session()
 
         if self._reader_task:
@@ -480,7 +532,13 @@ class ACPAgent:
                 await asyncio.wait_for(self._reader_task, timeout=2.0)
             except (asyncio.TimeoutError, asyncio.CancelledError):
                 pass
+
         if self.process:
+            # H7: Close stdin before terminating
+            try:
+                self.process.stdin.close()
+            except Exception:
+                pass
             try:
                 self.process.terminate()
                 await asyncio.wait_for(self.process.wait(), timeout=5.0)
@@ -501,17 +559,29 @@ class ConsortiumMessage:
         self.timestamp = time.time()
 
     def format(self) -> str:
+        # L5: Timestamp intentionally omitted from format — agents see only
+        # [Name]: message, which is cleaner for LLM consumption.
         return f"[{self.sender}]: {self.text}"
 
 
+def _strip_markdown(text: str) -> str:
+    """Strip common markdown formatting characters (L1)."""
+    text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)  # **bold**
+    text = re.sub(r'`([^`]+)`', r'\1', text)        # `code`
+    text = re.sub(r'__([^_]+)__', r'\1', text)      # __bold__
+    text = re.sub(r'_([^_]+)_', r'\1', text)         # _italic_
+    return text
+
+
 def _is_pass(response: str) -> bool:
-    """Check if a response is a PASS. (#15 — avoid false positives)
+    """Check if a response is a PASS.
 
     Only matches PASS when it's the entire response (possibly with trailing
     punctuation/whitespace). "boarding PASS" does not match.
+    Handles markdown-formatted PASS (L1).
     """
-    stripped = response.strip().upper()
-    return stripped in ("PASS", "PASS.", "PASS:")
+    stripped = _strip_markdown(response.strip()).strip().upper()
+    return stripped in ("PASS", "PASS.", "PASS:", "PASS!", "PASS-")
 
 
 def _extract_message_from_pass(response: str) -> tuple[str | None, bool]:
@@ -521,19 +591,18 @@ def _extract_message_from_pass(response: str) -> tuple[str | None, bool]:
     Returns (None, True) if it's a pure PASS.
     Returns (response, False) if it's a regular message.
 
-    #15 — PASS must be on its own line to count.
+    PASS must be on its own line to count.
+    M1: Does NOT strip trailing dots from the message itself.
     """
     stripped = response.strip()
 
-    # Pure PASS
     if _is_pass(stripped):
         return None, True
 
-    # Check if last line is exactly PASS
     lines = stripped.split('\n')
     last_line = lines[-1].strip()
     if _is_pass(last_line):
-        message = '\n'.join(lines[:-1]).strip().rstrip('.')
+        message = '\n'.join(lines[:-1]).strip()  # M1: don't rstrip('.')
         if message:
             return message, True
         return None, True
@@ -544,15 +613,17 @@ def _extract_message_from_pass(response: str) -> tuple[str | None, bool]:
 class Consortium:
     def __init__(self, topic: str, agent_configs: list[dict],
                  max_messages: int = 5, initiator: str = "Human",
-                 interactive: bool = False, prompt_timeout: int = 180):
+                 interactive: bool = False, prompt_timeout: int = 180,
+                 unsafe: bool = False, max_cycles: int = 100):  # M11
         self.topic = topic
         self.agent_configs = agent_configs
         self.max_messages = max_messages
         self.initiator = initiator
         self.interactive = interactive
         self.prompt_timeout = prompt_timeout
+        self.unsafe = unsafe  # C3
+        self.max_cycles = max_cycles  # M11
 
-        # Build agent registry
         self.agents = [(c["id"], c.get("name", c["id"])) for c in agent_configs]
 
         self.acp_agents: dict[str, ACPAgent] = {}
@@ -565,9 +636,8 @@ class Consortium:
         self.transcript: list[ConsortiumMessage] = []
         self.lock = asyncio.Lock()
         self.ending = False
-
-        # Pre-set transcript_path so save_transcript failure doesn't crash (#18)
         self.transcript_path: Path | None = None
+        self._started_agents: set[str] = set()  # L7: replace monkey-patching
 
     def name(self, aid: str) -> str:
         for agent_id, name in self.agents:
@@ -576,7 +646,8 @@ class Consortium:
         return aid[:12]
 
     def all_names(self, exclude: str | None = None) -> str:
-        return ", ".join(self.name(aid) for aid, _ in self.agents if aid != exclude)
+        # M12: only include active agents
+        return ", ".join(self.name(aid) for aid, _ in self.agents if aid != exclude and aid in self.active)
 
     def ts(self) -> str:
         return datetime.now().strftime("%H:%M:%S")
@@ -594,7 +665,7 @@ class Consortium:
             model_str = f" (model: {model})" if model else ""
             self.log(f"Starting {name}{model_str}...")
             try:
-                agent = ACPAgent(config)
+                agent = ACPAgent(config, unsafe=self.unsafe)  # C3
                 await asyncio.wait_for(agent.start(), timeout=90)
                 self.acp_agents[aid] = agent
                 self.log(f"  {name} ready (session: {agent.session_id[:12]}...)")
@@ -605,10 +676,10 @@ class Consortium:
     async def broadcast(self, sender_id: str, text: str, msg_type: str = "message"):
         msg = ConsortiumMessage(self.name(sender_id), text, msg_type)
         self.transcript.append(msg)
-        # Only queue for active agents (#23 — don't queue for inactive ones)
         if msg_type == "message":
-            for aid in self.queues:
-                if aid != sender_id and aid in self.active:
+            # L10: iterate active agents only
+            for aid in list(self.active):
+                if aid != sender_id:
                     await self.queues[aid].put(msg)
         display = text if msg_type == "message" else f"({text})"
         sender_name = self.name(sender_id) if sender_id else "System"
@@ -668,9 +739,8 @@ class Consortium:
         if not agent or aid not in self.active or self.ending:
             return
 
-        first = not hasattr(agent, '_consortium_started')
+        first = aid not in self._started_agents  # L7
 
-        # Collect new messages from queue
         new_msgs = []
         try:
             first_msg = await asyncio.wait_for(self.queues[aid].get(), timeout=2.0)
@@ -682,32 +752,29 @@ class Consortium:
 
         prompt = self.first_prompt(aid) if first else self.update_prompt(aid, new_msgs)
         if first:
-            agent._consortium_started = True
+            self._started_agents.add(aid)
 
         self.log(f"*{name} is thinking...*")
 
-        # Stream thinking to console
         async def on_event(event):
             kind = event.get("kind", "")
             if kind in ("agent_thought_chunk", "agent_thought"):
                 thinking = event.get("thinking", "")
-                sys.stdout.write(f"\\r  {name} (thinking): {thinking[-80:]}")
+                sys.stdout.write(f"\r  {name} (thinking): {thinking[-80:]}")
                 sys.stdout.flush()
             elif kind in ("agent_message_chunk", "agent_message"):
-                sys.stdout.write("\\r" + " " * 100 + "\\r")
+                sys.stdout.write("\r" + " " * 100 + "\r")
                 sys.stdout.flush()
 
-        # Call agent
         try:
             response = await asyncio.wait_for(
                 agent.prompt(prompt, on_event=on_event),
                 timeout=self.prompt_timeout
             )
-            sys.stdout.write("\\r" + " " * 100 + "\\r")
+            sys.stdout.write("\r" + " " * 100 + "\r")
             sys.stdout.flush()
         except asyncio.TimeoutError:
             self.log(f"  {name} timed out — PASS")
-            # Cancel the session (#5)
             await agent.cancel_session()
             self.passed.add(aid)
             await self.broadcast(aid, "(timed out)", "pass")
@@ -718,19 +785,15 @@ class Consortium:
             return
 
         response = response.strip()
-
-        # Use improved PASS detection (#15)
         message, passed = _extract_message_from_pass(response)
 
         if passed and message is None:
-            # Pure PASS
             self.passed.add(aid)
             self.log(f"  {name}: PASS")
             await self.broadcast(aid, "explicitly passed", "pass")
             return
 
         if passed and message is not None:
-            # Spoke then PASS
             self.quotas[aid] -= 1
             self.passed.discard(aid)
             await self.broadcast(aid, message)
@@ -741,61 +804,78 @@ class Consortium:
                 self.active.discard(aid)
             return
 
-        # Regular message — submit with lock
         actual_response = message if message else response
 
+        # C6: Only hold lock for the queue drain, not during re-prompt
         async with self.lock:
             missed = []
             while not self.queues[aid].empty():
                 missed.append(self.queues[aid].get_nowait())
 
-            if missed:
-                self.log(f"  {name}: context changed, re-prompting...")
-                try:
-                    revised = await asyncio.wait_for(
-                        agent.prompt(self.reprompt(aid, actual_response, missed)),
-                        timeout=self.prompt_timeout
-                    )
-                    rev_msg, rev_passed = _extract_message_from_pass(revised)
-                    if not rev_passed and rev_msg:
-                        actual_response = rev_msg
-                    elif rev_passed and rev_msg:
-                        actual_response = rev_msg
-                    elif rev_passed:
-                        self.passed.add(aid)
-                        return
-                except (asyncio.TimeoutError, ACPError):
-                    pass
+        if missed:
+            self.log(f"  {name}: context changed, re-prompting...")
+            try:
+                revised = await asyncio.wait_for(
+                    agent.prompt(self.reprompt(aid, actual_response, missed)),
+                    timeout=self.prompt_timeout
+                )
+                rev_msg, rev_passed = _extract_message_from_pass(revised)
+                if rev_passed:
+                    # C8: properly handle PASS from re-prompt
+                    if rev_msg:
+                        self.quotas[aid] -= 1
+                        self.passed.discard(aid)
+                        await self.broadcast(aid, rev_msg)
+                    self.passed.add(aid)
+                    if not rev_msg:
+                        await self.broadcast(aid, "explicitly passed", "pass")
+                    else:
+                        await self.broadcast(aid, "said their piece, then passed", "pass")
+                    if self.quotas[aid] <= 0:
+                        self.active.discard(aid)
+                    return
+                elif rev_msg:
+                    actual_response = rev_msg
+            except asyncio.TimeoutError:
+                # M3: call cancel_session on re-prompt timeout
+                self.log(f"  {name} re-prompt timed out — using original response")
+                await agent.cancel_session()
+            except ACPError:
+                pass
 
-            self.quotas[aid] -= 1
-            self.passed.discard(aid)
-            await self.broadcast(aid, actual_response)
+        self.quotas[aid] -= 1
+        self.passed.discard(aid)
+        await self.broadcast(aid, actual_response)
 
-            if self.quotas[aid] <= 0:
-                self.log(f"  {name} is out of messages")
-                self.active.discard(aid)
+        if self.quotas[aid] <= 0:
+            self.log(f"  {name} is out of messages")
+            self.active.discard(aid)
 
     async def human_loop(self):
         if not self.interactive:
             return
-        loop = asyncio.get_running_loop()  # #20
+        loop = asyncio.get_running_loop()
         while not self.ending:
             try:
-                line = await loop.run_in_executor(None, sys.stdin.readline)
-                if not line:
+                # C1: Use asyncio.to_thread with stdin.fileno() + os.read
+                # This uses a daemon thread and doesn't block shutdown
+                line_bytes = await loop.run_in_executor(None, lambda: os.read(sys.stdin.fileno(), 65536))
+                if not line_bytes:
                     break
-                line = line.strip()
+                line = line_bytes.decode().strip()
                 if line == "/end":
                     self.ending = True
                     break
                 if line:
                     msg = ConsortiumMessage("Human", line)
                     self.transcript.append(msg)
-                    for aid in self.queues:
-                        if aid in self.active:  # #23
-                            await self.queues[aid].put(msg)
+                    for aid in list(self.active):  # L10
+                        await self.queues[aid].put(msg)
                     self.log(f"**[Human]** {line}")
-            except Exception:
+            except asyncio.CancelledError:
+                break
+            except Exception as e:  # M9: log exceptions
+                print(f"[human_loop] error: {e}", file=sys.stderr)
                 break
 
     async def run(self):
@@ -809,55 +889,48 @@ class Consortium:
         self.log(f"Agents: {', '.join(self.name(aid) for aid, _ in self.agents if aid in self.active)}")
         self.log(f"Max messages per agent: {self.max_messages}\n")
 
-        # Broadcast topic
-        for aid in list(self.active):
-            await self.queues[aid].put(ConsortiumMessage(self.initiator, self.topic))
+        # H12: Add topic to transcript
+        await self.broadcast(self.initiator, self.topic)
 
         human_task = asyncio.create_task(self.human_loop())
 
-        for cycle in range(100):
+        for cycle in range(self.max_cycles):  # M11
             if self.ending:
                 break
 
             self.log(f"--- Cycle {cycle + 1} ---")
             self.transcript.append(ConsortiumMessage("System", f"--- Cycle {cycle + 1} ---", "system"))
 
-            tasks = [asyncio.create_task(self.agent_loop(aid)) for aid in list(self.active)]
+            # C7: capture active list BEFORE creating tasks
+            active_list = list(self.active)
+            tasks = [asyncio.create_task(self.agent_loop(aid)) for aid in active_list]
             if tasks:
                 results = await asyncio.gather(*tasks, return_exceptions=True)
-                # Log swallowed exceptions instead of silently dropping (#9)
                 for i, result in enumerate(results):
                     if isinstance(result, Exception):
-                        aid = list(self.active)[i] if i < len(list(self.active)) else "?"
+                        aid = active_list[i] if i < len(active_list) else "?"
                         self.log(f"  Warning: agent_loop error for {aid}: {result}")
 
-            # Check end conditions BEFORE clearing passed (#8)
-            # If all active agents passed and nobody has new messages, we're done
             if not self.active:
                 break
 
-            # Check if all active agents have passed
             all_passed = self.active.issubset(self.passed)
-
-            # Check if any agent has messages waiting or quota remaining
             has_pending = any(not self.queues[aid].empty() for aid in self.active)
             has_quota = any(self.quotas[aid] > 0 for aid in self.active)
 
-            # Clear passed for next cycle AFTER checking end conditions
             if all_passed and not has_pending:
-                # Everyone passed and no new messages — end
                 if not has_quota:
                     break
-                # Still have quota but everyone passed — try one more cycle
-                # if there are messages, otherwise end
 
             self.passed.clear()
 
-            # Simplified end-of-cycle check
             if not has_pending and not has_quota:
                 break
             if not has_pending and all_passed:
                 break
+        else:
+            # M11: warn when hitting cycle limit
+            self.log(f"Warning: reached cycle limit ({self.max_cycles}). Ending.")
 
         self.ending = True
         human_task.cancel()
@@ -866,11 +939,12 @@ class Consortium:
         except asyncio.CancelledError:
             pass
 
-        # Reflection phase
         await self.reflection_phase()
 
-        for agent in self.acp_agents.values():
-            await agent.stop()
+        # H8: parallel agent shutdown
+        stop_tasks = [agent.stop() for agent in self.acp_agents.values()]
+        if stop_tasks:
+            await asyncio.gather(*stop_tasks, return_exceptions=True)
 
         self.save_transcript()
         msg_count = sum(1 for m in self.transcript if m.type == "message")
@@ -908,7 +982,8 @@ class Consortium:
         )
 
         tasks = []
-        for aid, agent in self.acp_agents.items():
+        reflect_agents = list(self.acp_agents.items())
+        for aid, agent in reflect_agents:
             name = self.name(aid)
             tasks.append(self._reflect(aid, agent, name, reflection_prompt))
 
@@ -916,7 +991,8 @@ class Consortium:
             results = await asyncio.gather(*tasks, return_exceptions=True)
             for i, result in enumerate(results):
                 if isinstance(result, Exception):
-                    self.log(f"  Warning: reflection error: {result}")
+                    aid = reflect_agents[i][0] if i < len(reflect_agents) else "?"
+                    self.log(f"  Warning: reflection error for {aid}: {result}")
 
         self.log("--- Reflection complete ---")
 
@@ -937,17 +1013,19 @@ class Consortium:
 
     def save_transcript(self):
         try:
-            ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+            now = datetime.now()  # M8: call once
+            ts = now.strftime("%Y%m%d-%H%M%S")
             slug = re.sub(r'[^a-z0-9]+', '-', self.topic.lower())[:50].strip('-')
             d = Path.home() / "consortium-transcripts"
-            d.mkdir(exist_ok=True)
+            d.mkdir(exist_ok=True, parents=True)  # M7
             self.transcript_path = d / f"{ts}-{slug}.md"
 
+            now_str = now.strftime('%Y-%m-%d %H:%M:%S')
             lines = [
                 f"# Consortium: {self.topic}",
                 f"**Participants:** {', '.join(name for _, name in self.agents)}",
                 f"**Transport:** ACP (raw JSON-RPC over stdio)",
-                f"**Started:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                f"**Started:** {now_str}",
                 f"**Max messages per agent:** {self.max_messages}",
                 "", "---", "",
             ]
@@ -959,8 +1037,8 @@ class Consortium:
                 else:
                     lines.append(f"**[{msg.sender}]** {msg.text}")
                 lines.append("")
-            lines += ["---", f"**Ended:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"]
-            self.transcript_path.write_text("\n".join(lines))
+            lines += ["---", f"**Ended:** {now_str}"]
+            self.transcript_path.write_text("\n".join(lines), encoding="utf-8")  # L2
         except Exception as e:
             print(f"Warning: failed to save transcript: {e}", file=sys.stderr)
 
@@ -979,6 +1057,9 @@ Examples:
 
   # Interactive (human participates):
   consortium.py --topic "..." --config agents.yaml --interactive
+
+  # Unsafe mode (unrestricted agent permissions):
+  consortium.py --topic "..." --config agents.yaml --unsafe
         """
     )
     parser.add_argument("--topic", required=True, help="Discussion topic")
@@ -993,9 +1074,23 @@ Examples:
                         help="Enable interactive mode (human can type messages)")
     parser.add_argument("--timeout", type=int, default=180,
                         help="Per-agent prompt timeout in seconds (default: 180)")
+    parser.add_argument("--unsafe", action="store_true",
+                        help="Use unrestricted permissions (agents can run any command without approval)")
+    parser.add_argument("--max-cycles", type=int, default=100,
+                        help="Maximum number of consortium cycles (default: 100)")
     args = parser.parse_args()
 
-    # Build agent configs
+    # M5: validate args
+    if args.max_messages <= 0:
+        print("Error: --max-messages must be > 0", file=sys.stderr)
+        sys.exit(1)
+    if args.timeout <= 0:
+        print("Error: --timeout must be > 0", file=sys.stderr)
+        sys.exit(1)
+    if args.max_cycles <= 0:
+        print("Error: --max-cycles must be > 0", file=sys.stderr)
+        sys.exit(1)
+
     agent_configs = []
 
     if args.config:
@@ -1009,7 +1104,6 @@ Examples:
         print("Error: need at least 2 agents. Use --config or --agent flags.", file=sys.stderr)
         sys.exit(1)
 
-    # Deduplicate by agent ID (case-insensitive) (#16)
     seen = set()
     unique_configs = []
     for c in agent_configs:
@@ -1020,7 +1114,8 @@ Examples:
     agent_configs = unique_configs
 
     c = Consortium(args.topic, agent_configs, args.max_messages,
-                   args.initiator, args.interactive, args.timeout)
+                   args.initiator, args.interactive, args.timeout,
+                   unsafe=args.unsafe, max_cycles=args.max_cycles)
     asyncio.run(c.run())
 
 
