@@ -1,18 +1,21 @@
 # Agent config for Consortium
 # This file defines which agents participate in consortium discussions.
 # Copy this to agents.yaml and customize for your setup.
+#
+# IMPORTANT: The optional `model` field overrides the agent's default model.
+# For Letta Code agents, OMITTING the model field is recommended — the agent
+# will use its configured model (including BYOK routing like z.ai, OpenRouter,
+# etc.). Setting model: glm or model: gpt-4o may strip the provider prefix
+# and route to a different billing path than the agent's default.
 
 agents:
   # Example: Letta Code agent (via letta-acp)
-  # The optional `model` field names the model to use.
-  # `model_env` specifies which env var to inject with the model value.
-  # For letta-acp, the env var is LETTA_ACP_MODEL.
+  # Recommended: omit `model` to use the agent's default model + provider routing
   - id: alice
     name: Alice
     command: letta-acp
     args: ["--yolo"]
-    model: glm
-    model_env: LETTA_ACP_MODEL
+    # model: omitted — uses agent's default (recommended)
     env:
       LETTA_ACP_BACKEND: remote
       LETTA_AGENT_ID: agent-xxxx
@@ -21,12 +24,14 @@ agents:
       NODE_OPTIONS: "--experimental-websocket"
     cwd: /home/user
 
-  # Example: agent using a different model
+  # Example: agent with explicit model override (use full model handle)
+  # WARNING: bare names like "glm" or "gpt-4o" may strip provider routing.
+  # Use the full handle (e.g. "openai/gpt-4o") to preserve correct billing.
   - id: bob
     name: Bob
     command: letta-acp
     args: ["--yolo"]
-    model: gpt-4o
+    model: openai/gpt-4o
     model_env: LETTA_ACP_MODEL
     env:
       LETTA_ACP_BACKEND: remote
@@ -35,28 +40,31 @@ agents:
       NODE_OPTIONS: "--experimental-websocket"
     cwd: /home/user
 
-  # Example: Claude Code agent (model via command args, no model_env needed)
+  # Example: Claude Code agent (needs ACP adapter)
   # - id: claude
   #   name: Claude
-  #   command: claude
-  #   args: ["--model", "claude-sonnet-4-5-20250929"]
+  #   command: claude-agent-acp
+  #   args: []
   #   env: {}
   #   cwd: /home/user
 
-  # Example: Copilot CLI agent
+  # Example: Copilot CLI agent (needs --acp --stdio flags)
   # - id: copilot
   #   name: Copilot
-  #   command: copilot.exe
-  #   args: ["--yolo"]
+  #   command: copilot
+  #   args: ["--acp", "--stdio"]
   #   env: {}
   #   cwd: /home/user
 
-  # Example: any ACP-compatible agent with custom model env var
-  # - id: custom
-  #   name: Custom
-  #   command: my-acp-agent
-  #   args: []
-  #   model: my-model-name
-  #   model_env: MY_AGENT_MODEL
-  #   env: {}
-  #   cwd: /home/user
+  # Example: agent with per-agent message limit
+  - id: charlie
+    name: Charlie
+    command: letta-acp
+    args: ["--yolo"]
+    max_messages: 3  # overrides global --max-messages for this agent only
+    env:
+      LETTA_ACP_BACKEND: remote
+      LETTA_AGENT_ID: agent-zzzz
+      LETTA_APP_SERVER_URL: ws://127.0.0.1:ZZZZZ
+      NODE_OPTIONS: "--experimental-websocket"
+    cwd: /home/user

@@ -53,8 +53,9 @@ agents:
     name: Alice
     command: letta-acp
     args: ["--yolo"]
-    model: glm                  # optional: model name
-    model_env: LETTA_ACP_MODEL  # optional: env var to inject with model value
+    # model: omit to use agent's default (recommended)
+    # If overriding, use full handle (e.g. "openai/gpt-4o") to preserve
+    # provider routing. Bare names like "glm" may route to wrong billing path.
     env:
       LETTA_ACP_BACKEND: remote
       LETTA_AGENT_ID: agent-xxxx
@@ -62,8 +63,9 @@ agents:
 
   - id: bob
     name: Bob
-    command: claude
-    args: ["--model", "claude-sonnet-4-5-20250929"]  # model via CLI args
+    command: claude-agent-acp
+    args: []
+    max_messages: 3  # optional: per-agent override of global --max-messages
     env: {}
     cwd: /home/user
 ```
@@ -82,10 +84,14 @@ See `agents.example.yaml` for a complete reference config.
 
 ## Per-Agent Model Override
 
-The optional `model` field names the model to use. `model_env` specifies which environment variable to inject with that value. This is agent-agnostic — you choose the env var name that your ACP agent reads.
+The optional `model` field names the model to use. `model_env` specifies which environment variable to inject with that value.
 
-- **letta-acp**: `model_env: LETTA_ACP_MODEL`
-- **Custom agents**: use whatever env var your agent reads, or skip `model_env` and pass model via `args` or `env` instead
+**Recommended:** Omit `model` for Letta Code agents. The agent will use its configured default model, which includes correct provider routing (BYOK, Letta credits, etc.).
+
+**If overriding:** Use the full model handle (e.g. `openai/gpt-4o`, `anthropic/claude-sonnet-4-5-20250929`). Bare names like `glm` may strip the provider prefix and route to a different billing path than intended.
+
+- **letta-acp**: `model_env: LETTA_ACP_MODEL` (or omit entirely)
+- **Custom agents**: use whatever env var your agent reads, or pass model via `args` instead
 
 Different agents can use different models in the same consortium.
 
@@ -93,11 +99,12 @@ Different agents can use different models in the same consortium.
 
 1. **Spawn**: Each agent is started as a subprocess communicating via ACP (JSON-RPC 2.0 over stdio)
 2. **Initialize**: Consortium sends `initialize` + `session/new` via ACP protocol
-3. **Discussion**: Agents take turns responding to the topic and each other's messages
-4. **PASS mechanism**: Agents can PASS if they have nothing to add (PASS doesn't consume quota)
-5. **Re-prompt**: If new messages arrive while an agent is composing, they get a chance to revise
-6. **Reflection**: After the discussion, each agent receives the full transcript to process (update memory, run tools, note action items)
-7. **Transcript**: Full conversation saved to `~/consortium-transcripts/`
+3. **Event-driven discussion**: Each agent runs as an independent long-running task. Messages flow immediately as they're produced — fast agents speak again without waiting for slow ones
+4. **Compose-check-block**: When an agent finishes composing, it checks if new messages arrived from other agents. If yes, it re-composes to incorporate them before broadcasting. This guarantees every agent sees all prior messages before speaking
+5. **PASS mechanism**: Agents can PASS if they have nothing to add (PASS doesn't consume quota). After PASSing, they wait and get re-prompted when new messages arrive
+6. **Idle timeout**: Conversation ends after N seconds of silence (default 30s)
+7. **Reflection**: After the discussion, each agent receives the full transcript to process (update memory, run tools, note action items)
+8. **Transcript**: Full conversation saved to `~/consortium-transcripts/`
 
 ## Options
 
@@ -106,10 +113,13 @@ Different agents can use different models in the same consortium.
 | `--topic` | Discussion topic (required) | — |
 | `--config` | Agent config file (YAML or JSON) | — |
 | `--agent` | Agent in `name:command` format (repeatable) | — |
-| `--max-messages` | Max messages per agent | 5 |
+| `--max-messages` | Max messages per agent (or per-agent via config) | 5 |
 | `--initiator` | Who started the discussion | Human |
 | `--interactive` | Human can type messages during discussion | false |
-| `--timeout` | Per-agent prompt timeout (seconds) | 180 |
+| `--timeout` | Per-agent prompt timeout (seconds) | 300 |
+| `--idle-timeout` | Seconds of silence before ending | 30 |
+| `--unsafe` | Auto-approve all agent tool permissions | false |
+| `--max-cycles` | Safety valve: max compose cycles | 100 |
 
 ## Agent-Agnostic
 
