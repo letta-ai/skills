@@ -1,0 +1,41 @@
+# Agent config for Consortium
+# This file defines which agents participate in consortium discussions.
+# Copy this to agents.yaml and customize for your setup.
+
+agents:
+  # Example: Letta Code agents (via letta-acp)
+  - id: alice
+    name: Alice
+    command: letta-acp
+    args: ["--yolo"]
+    env:
+      LETTA_ACP_BACKEND: remote
+      LETTA_AGENT_ID: agent-xxxx
+      LETTA_APP_SERVER_URL: ws://127.0.0.1:14601
+    cwd: /home/user
+
+  - id: bob
+    name: Bob
+    command: letta-acp
+    args: ["--yolo"]
+    env:
+      LETTA_ACP_BACKEND: remote
+      LETTA_AGENT_ID: agent-yyyy
+      LETTA_APP_SERVER_URL: ws://127.0.0.1:14602
+    cwd: /home/user
+
+  # Example: Claude Code agent
+  # - id: claude
+  #   name: Claude
+  #   command: claude
+  #   args: []
+  #   env: {}
+  #   cwd: /home/user
+
+  # Example: Copilot CLI agent
+  # - id: copilot
+  #   name: Copilot
+  #   command: copilot.exe
+  #   args: ["--yolo"]
+  #   env: {}
+  #   cwd: /home/user
