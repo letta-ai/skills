@@ -939,27 +939,32 @@ class Consortium:
             has_pending = any(not self.queues[aid].empty() for aid in self.active)
             has_quota = any(self.quotas[aid] > 0 for aid in self.active)
 
-            if all_passed and not has_pending:
-                if not has_quota:
-                    break
+            # Core end conditions:
+            # 1. No active agents left
+            # 2. All passed + no pending messages → discussion is over
+            # 3. No pending messages + no quota left → nobody can speak
+            # 4. No pending messages + nobody passed or spoke this cycle → stalemate
 
-            # BUG FIX: If no agent received any messages this cycle (all returned
-            # early from empty queue), there's nothing more to discuss.
-            # Without this check, the consortium cycles up to max_cycles × 2s
-            # doing nothing.
-            any_spoke = any(self.last_said.get(aid) is not None or aid in self.passed for aid in self.active)
-            if not has_pending and not all_passed and not any_spoke:
-                # Nobody had messages, nobody spoke, nobody passed — stalemate
-                self.log("No agents have messages to process. Ending.")
-                break
+            if not has_pending:
+                # No new messages queued for anyone. Check if we should stop.
+                if not has_quota:
+                    # Nobody has messages left to send
+                    break
+                if all_passed:
+                    # Everyone passed and nobody has anything to add
+                    break
+                # Check if ANY agent actually did something this cycle
+                # (spoke, passed, or was prompted). If nobody did anything
+                # (all returned early from empty queues), it's a stalemate.
+                any_acted = bool(self.passed) or any(
+                    not self.queues[aid].empty() for aid in self.active
+                )
+                if not any_acted:
+                    self.log("No agents have messages to process. Ending.")
+                    break
 
             self.prev_passed = set(self.passed)  # M8: snapshot before clearing
             self.passed.clear()
-
-            if not has_pending and not has_quota:
-                break
-            if not has_pending and all_passed:
-                break
         else:
             # M11: warn when hitting cycle limit
             self.log(f"Warning: reached cycle limit ({self.max_cycles}). Ending.")
