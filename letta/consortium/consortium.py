@@ -333,26 +333,21 @@ class ACPAgent:
         msg_id = msg["id"]
 
         if method == "session/request_permission":
-            if not self.unsafe:
-                # Safe mode: deny all permission requests.
-                await self._send({"jsonrpc": "2.0", "id": msg_id,
-                           "result": {"outcome": {"outcome": "denied"}}})
-                return
-            # Unsafe mode: auto-approve
             options = params.get("options", [])
             for opt in options:
                 if opt.get("kind") in ("allow_always", "allow_once"):
-                    opt_id = opt.get("optionId")
+                    opt_id = opt.get("optionId")  # M6: use .get() to avoid KeyError
                     if opt_id:
                         await self._send({"jsonrpc": "2.0", "id": msg_id,
                                    "result": {"outcome": {"outcome": "selected", "optionId": opt_id}}})
                         return
             if options:
-                opt_id = options[0].get("optionId")
+                opt_id = options[0].get("optionId")  # M6
                 if opt_id:
                     await self._send({"jsonrpc": "2.0", "id": msg_id,
                                "result": {"outcome": {"outcome": "selected", "optionId": opt_id}}})
                     return
+            # H9: Empty options for permission request — deny, don't return method-not-found
             await self._send({"jsonrpc": "2.0", "id": msg_id,
                        "result": {"outcome": {"outcome": "denied"}}})
             return
@@ -643,13 +638,13 @@ class Consortium:
 
         self.acp_agents: dict[str, ACPAgent] = {}
         self.queues: dict[str, asyncio.Queue] = {aid: asyncio.Queue() for aid, _ in self.agents}
-        self.quotas: dict[str, int] = {aid: config.get("max_messages", max_messages) for aid, config in
-                                       [(c["id"], c) for c in agent_configs]}
+        self.quotas: dict[str, int] = {c["id"]: c.get("max_messages", max_messages) for c in agent_configs}
         self.initial_quotas: dict[str, int] = dict(self.quotas)  # For display
         self.passed: set[str] = set()
         self.active: set[str] = set()
         self.last_said: dict[str, str | None] = {aid: None for aid, _ in self.agents}
         self._composing: set[str] = set()  # LLM call in progress
+        self._total_composes: int = 0     # Safety valve: total compose calls across all agents
 
         self.transcript: list[ConsortiumMessage] = []
         self.lock = asyncio.Lock()
@@ -785,8 +780,7 @@ class Consortium:
                     queue_wait = self.idle_timeout
                 first_msg = await asyncio.wait_for(self.queues[aid].get(), timeout=queue_wait)
                 new_msgs.append(first_msg)
-                # Drain any additional messages that arrived
-                await asyncio.sleep(0.1)  # Brief pause to let concurrent broadcasts settle
+                # Drain any additional messages that arrived (Design #8: no sleep, drain immediately)
                 while not self.queues[aid].empty():
                     new_msgs.append(self.queues[aid].get_nowait())
             except asyncio.TimeoutError:
@@ -819,6 +813,7 @@ class Consortium:
 
                 self.log(f"*{name} is thinking...*")
                 self._composing.add(aid)
+                self._total_composes += 1
 
                 async def on_event(event):
                     kind = event.get("kind", "")
@@ -831,9 +826,10 @@ class Consortium:
                         sys.stdout.flush()
 
                 try:
+                    # Design #11: single timeout — prompt() handles its own internal deadline
                     response = await asyncio.wait_for(
                         agent.prompt(current_prompt, on_event=on_event, timeout=self.prompt_timeout),
-                        timeout=self.prompt_timeout
+                        timeout=self.prompt_timeout + 5  # Outer timeout slightly longer than inner
                     )
                     sys.stdout.write("\r" + " " * 100 + "\r")
                     sys.stdout.flush()
@@ -917,11 +913,16 @@ class Consortium:
                 continue
 
             # Regular message — broadcast (already verified no missed messages)
+            # Design #10: re-composes consume quota since they cost real LLM calls
             actual_response = message if message else response
-            self.quotas[aid] -= 1
+            # First compose costs 1 quota. Each re-compose costs 1 additional.
+            total_cost = 1 + recompose_count
+            self.quotas[aid] -= total_cost
             self.passed.discard(aid)
             await self.broadcast(aid, actual_response)
             self.last_said[aid] = actual_response
+            if recompose_count > 0:
+                self.log(f"  {name}: broadcast after {recompose_count} re-compose(s) (quota cost: {total_cost})")
 
             if self.quotas[aid] <= 0:
                 self.log(f"  {name} is out of messages")
@@ -1002,6 +1003,11 @@ class Consortium:
             # Check idle timeout
             idle_seconds = time.time() - self._last_activity
             has_pending = any(not self.queues[aid].empty() for aid in self.active)
+
+            # Safety valve: max_cycles limits total compose calls
+            if self._total_composes >= self.max_cycles * len(self.agents):
+                self.log(f"Safety valve: reached {self._total_composes} total composes. Ending.")
+                break
             anyone_composing = bool(self._composing)
             all_remaining_passed = self.active.issubset(self.passed)
 
