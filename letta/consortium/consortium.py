@@ -804,7 +804,7 @@ class Consortium:
             current_prompt = self.first_prompt(aid) if first else self.update_prompt(aid, new_msgs)
             current_draft = None  # The agent's composed response
             recompose_count = 0  # Limit re-compose iterations (prevent livelock)
-            MAX_RECOMPOSE = 5   # After this, broadcast what we have
+            MAX_RECOMPOSE = max(1, len(self.agents) - 1)  # One re-compose per other agent
 
             while True:
                 if first:
