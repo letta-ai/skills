@@ -62,8 +62,8 @@ agents:
 
   - id: bob
     name: Bob
-    command: claude-agent-acp
-    args: []  # Claude Code needs the ACP adapter
+    command: claude
+    args: ["--model", "claude-sonnet-4-5-20250929"]  # model via CLI args
     env: {}
     cwd: /home/user
 ```

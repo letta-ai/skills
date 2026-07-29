@@ -35,19 +35,19 @@ agents:
       NODE_OPTIONS: "--experimental-websocket"
     cwd: /home/user
 
-  # Example: Claude Code agent (needs ACP adapter)
+  # Example: Claude Code agent (model via command args, no model_env needed)
   # - id: claude
   #   name: Claude
-  #   command: claude-agent-acp
-  #   args: []
+  #   command: claude
+  #   args: ["--model", "claude-sonnet-4-5-20250929"]
   #   env: {}
   #   cwd: /home/user
 
-  # Example: Copilot CLI agent (needs --acp --stdio flags)
+  # Example: Copilot CLI agent
   # - id: copilot
   #   name: Copilot
-  #   command: copilot
-  #   args: ["--acp", "--stdio"]
+  #   command: copilot.exe
+  #   args: ["--yolo"]
   #   env: {}
   #   cwd: /home/user
 
