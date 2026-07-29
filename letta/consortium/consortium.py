@@ -939,29 +939,28 @@ class Consortium:
             has_pending = any(not self.queues[aid].empty() for aid in self.active)
             has_quota = any(self.quotas[aid] > 0 for aid in self.active)
 
-            # Core end conditions:
-            # 1. No active agents left
-            # 2. All passed + no pending messages → discussion is over
-            # 3. No pending messages + no quota left → nobody can speak
-            # 4. No pending messages + nobody passed or spoke this cycle → stalemate
-
+            # Core end condition: if no agent has pending messages, the
+            # consortium is done. Messages only enter queues via:
+            # 1. Initial topic (consumed in cycle 1)
+            # 2. Broadcast from agents who spoke (queued during this cycle)
+            # 3. Interactive human input (queued by human_loop)
+            #
+            # If has_pending=False after a cycle, no agent broadcast anything
+            # and the topic was already consumed. There is genuinely nothing
+            # for any agent to process next cycle. Ending here is correct
+            # regardless of quota or pass state — an agent with quota but no
+            # messages has nothing to respond to.
+            #
+            # Previous versions checked all_passed, has_quota, any_acted — all
+            # of which had edge cases where the consortium cycled endlessly.
             if not has_pending:
-                # No new messages queued for anyone. Check if we should stop.
-                if not has_quota:
-                    # Nobody has messages left to send
-                    break
                 if all_passed:
-                    # Everyone passed and nobody has anything to add
-                    break
-                # Check if ANY agent actually did something this cycle
-                # (spoke, passed, or was prompted). If nobody did anything
-                # (all returned early from empty queues), it's a stalemate.
-                any_acted = bool(self.passed) or any(
-                    not self.queues[aid].empty() for aid in self.active
-                )
-                if not any_acted:
-                    self.log("No agents have messages to process. Ending.")
-                    break
+                    self.log("All agents passed. Discussion complete.")
+                elif not has_quota:
+                    self.log("All agents out of messages.")
+                else:
+                    self.log("No pending messages. Ending.")
+                break
 
             self.prev_passed = set(self.passed)  # M8: snapshot before clearing
             self.passed.clear()
