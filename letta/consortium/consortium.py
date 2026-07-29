@@ -329,21 +329,27 @@ class ACPAgent:
         msg_id = msg["id"]
 
         if method == "session/request_permission":
+            if not self.unsafe:
+                # Safe mode: deny all permission requests.
+                # Only --unsafe mode auto-approves tool execution.
+                await self._send({"jsonrpc": "2.0", "id": msg_id,
+                           "result": {"outcome": {"outcome": "denied"}}})
+                return
+            # Unsafe mode: auto-approve
             options = params.get("options", [])
             for opt in options:
                 if opt.get("kind") in ("allow_always", "allow_once"):
-                    opt_id = opt.get("optionId")  # M6: use .get() to avoid KeyError
+                    opt_id = opt.get("optionId")
                     if opt_id:
                         await self._send({"jsonrpc": "2.0", "id": msg_id,
                                    "result": {"outcome": {"outcome": "selected", "optionId": opt_id}}})
                         return
             if options:
-                opt_id = options[0].get("optionId")  # M6
+                opt_id = options[0].get("optionId")
                 if opt_id:
                     await self._send({"jsonrpc": "2.0", "id": msg_id,
                                "result": {"outcome": {"outcome": "selected", "optionId": opt_id}}})
                     return
-            # H9: Empty options for permission request — deny, don't return method-not-found
             await self._send({"jsonrpc": "2.0", "id": msg_id,
                        "result": {"outcome": {"outcome": "denied"}}})
             return
@@ -875,24 +881,37 @@ class Consortium:
         loop = asyncio.get_running_loop()
         while not self.ending:
             try:
-                # C1/L7: Use asyncio.to_thread (daemon thread) with os.read.
-                # os.read on fileno() is interruptible by closing stdin.
-                line_bytes = await asyncio.to_thread(os.read, sys.stdin.fileno(), 65536)
+                # Use asyncio.to_thread with a non-blocking read approach.
+                # Set stdin to non-blocking mode so os.read returns immediately
+                # with EAGAIN when no data is available, instead of blocking
+                # the executor thread forever (which hangs asyncio shutdown).
+                import fcntl
+                fd = sys.stdin.fileno()
+                flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+                fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+
+                try:
+                    line_bytes = await asyncio.to_thread(os.read, fd, 65536)
+                except OSError:
+                    # No data available in non-blocking mode — brief sleep
+                    await asyncio.sleep(0.5)
+                    continue
+
                 if not line_bytes:
                     break
-                line = line_bytes.decode(errors="replace").strip()  # I1: consistent with M7
+                line = line_bytes.decode(errors="replace").strip()
                 if line == "/end":
                     self.ending = True
                     break
                 if line:
                     msg = ConsortiumMessage("Human", line)
                     self.transcript.append(msg)
-                    for aid in list(self.active):  # L10
+                    for aid in list(self.active):
                         await self.queues[aid].put(msg)
                     self.log(f"**[Human]** {line}")
             except asyncio.CancelledError:
                 break
-            except Exception as e:  # M9: log exceptions
+            except Exception as e:
                 print(f"[human_loop] error: {e}", file=sys.stderr)
                 break
 
