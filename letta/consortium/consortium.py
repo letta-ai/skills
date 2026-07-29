@@ -955,18 +955,20 @@ class Consortium:
             # of which had edge cases where the consortium cycled endlessly.
             if not has_pending:
                 # Log explicit reason and record in transcript
-                not_yet_spoken = [self.name(aid) for aid in self.active
-                                  if aid not in self._started_agents]
-                still_has_quota = [self.name(aid) for aid in self.active
-                                   if self.quotas.get(aid, 0) > 0 and aid not in self.passed]
                 if all_passed:
                     reason = "All agents passed. Discussion complete."
                 elif not has_quota:
                     reason = "All agents out of messages."
                 else:
                     reason = "No pending messages. Ending."
-                if still_has_quota:
-                    reason += f" Agents with remaining quota but no messages: {', '.join(still_has_quota)}."
+                # Make it clear which agents didn't get to respond
+                for aid in list(self.active):
+                    agent_quota = self.quotas.get(aid, 0)
+                    agent_passed = aid in self.passed
+                    agent_name = self.name(aid)
+                    if agent_quota > 0 and not agent_passed:
+                        self.transcript.append(ConsortiumMessage(
+                            "System", f"{agent_name} did not respond (no message to react to)", "system"))
                 self.log(reason)
                 self.transcript.append(ConsortiumMessage("System", reason, "system"))
                 break
