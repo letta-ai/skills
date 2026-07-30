@@ -1047,14 +1047,20 @@ class Consortium:
         end_reason = "All agents passed." if self.active.issubset(self.passed) else "Conversation concluded."
         self.transcript.append(ConsortiumMessage("System", end_reason, "system"))
 
-        await self.reflection_phase()
+        # Save transcript BEFORE reflection so it's never lost
+        self.save_transcript()
+
+        # Reflection phase with hard timeout — never hang the process
+        try:
+            await asyncio.wait_for(self.reflection_phase(), timeout=180.0)
+        except asyncio.TimeoutError:
+            self.log("Reflection phase timed out after 180s. Continuing to shutdown.")
 
         # H8: parallel agent shutdown
         stop_tasks = [agent.stop() for agent in self.acp_agents.values()]
         if stop_tasks:
             await asyncio.gather(*stop_tasks, return_exceptions=True)
 
-        self.save_transcript()
         msg_count = sum(1 for m in self.transcript if m.type == "message")
         self.log(f"\nConsortium ended. {msg_count} messages.")
         if self.transcript_path:
@@ -1112,7 +1118,7 @@ class Consortium:
         try:
             response = await asyncio.wait_for(
                 agent.prompt(prompt),
-                timeout=120.0
+                timeout=60.0
             )
             self.log(f"  {name} done reflecting")
         except asyncio.TimeoutError:
