@@ -17,6 +17,7 @@ This file documents the default sources used by the `ai-news` skill. Edit `fetch
 | Simon Willison | https://simonwillison.net/atom/everything/ | LLM tooling, prompt engineering, practical AI |
 | Lilian Weng | https://lilianweng.github.io/index.xml | Deep research posts (OpenAI) |
 | Latent Space | https://www.latent.space/feed | AI engineering podcast/newsletter |
+| AI Weekly | https://aiweekly.co/feed | What influential AI experts and organizations are reading and sharing |
 
 ### Adding More RSS Feeds
 
