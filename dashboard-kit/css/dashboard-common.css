@@ -1,0 +1,449 @@
+/*
+ * Dashboard Kit — Shared Theme & Layout CSS
+ *
+ * Usage:
+ *   - HTML templates: <link rel="stylesheet" href="dashboard-common.css">
+ *   - React: import './dashboard-common.css'
+ *
+ * Supports dark (default) and light themes via [data-theme="light"].
+ * Based on GitHub's dark theme palette (#0d1117) and the VSM microsite's
+ * Tailwind slate palette (#0f172a).
+ */
+
+/* ── Theme Variables ──────────────────────────────────────────── */
+:root {
+  /* Dark theme (default) */
+  --dash-bg: #0d1117;
+  --dash-surface: #161b22;
+  --dash-surface-alt: #21262d;
+  --dash-border: #30363d;
+  --dash-text: #c9d1d9;
+  --dash-text-muted: #8b949e;
+  --dash-accent: #58a6ff;
+  --dash-accent-light: #79c0ff;
+  --dash-success: #3fb950;
+  --dash-warning: #d29922;
+  --dash-error: #f85149;
+  --dash-sidebar-width: 360px;
+
+  /* Chart palette */
+  --dash-chart-1: #58a6ff;
+  --dash-chart-2: #3fb950;
+  --dash-chart-3: #d29922;
+  --dash-chart-4: #f78166;
+  --dash-chart-5: #a371f7;
+  --dash-chart-6: #f0883e;
+}
+
+[data-theme="light"],
+:root[data-theme="light"] {
+  --dash-bg: #ffffff;
+  --dash-surface: #f6f8fa;
+  --dash-surface-alt: #eaeef2;
+  --dash-border: #d0d7de;
+  --dash-text: #1f2328;
+  --dash-text-muted: #656d76;
+  --dash-accent: #0969da;
+  --dash-accent-light: #218bff;
+  --dash-success: #1a7f37;
+  --dash-warning: #9a6700;
+  --dash-error: #cf222e;
+
+  --dash-chart-1: #0969da;
+  --dash-chart-2: #1a7f37;
+  --dash-chart-3: #9a6700;
+  --dash-chart-4: #cf222e;
+  --dash-chart-5: #8250df;
+  --dash-chart-6: #bf3989;
+}
+
+/* ── Reset ────────────────────────────────────────────────────── */
+.dash-root,
+.dash-root *,
+.dash-root *::before,
+.dash-root *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.dash-root {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  background: var(--dash-bg);
+  color: var(--dash-text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Header ───────────────────────────────────────────────────── */
+.dash-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  background: var(--dash-surface);
+  border-bottom: 1px solid var(--dash-border);
+  flex-shrink: 0;
+}
+
+.dash-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--dash-text);
+}
+
+.dash-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* ── Theme Toggle ─────────────────────────────────────────────── */
+.dash-theme-toggle {
+  background: var(--dash-surface-alt);
+  border: 1px solid var(--dash-border);
+  color: var(--dash-text-muted);
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.dash-theme-toggle:hover {
+  color: var(--dash-text);
+  border-color: var(--dash-accent);
+}
+
+/* ── Freshness Badge ──────────────────────────────────────────── */
+.dash-freshness {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--dash-text-muted);
+}
+
+.dash-freshness-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dash-success);
+  display: inline-block;
+}
+
+.dash-freshness.aging .dash-freshness-dot { background: var(--dash-warning); }
+.dash-freshness.stale .dash-freshness-dot { background: var(--dash-error); }
+
+/* ── Summary Row ──────────────────────────────────────────────── */
+.dash-summary-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--dash-border);
+}
+
+.dash-summary-card {
+  background: var(--dash-surface-alt);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.dash-summary-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--dash-text-muted);
+}
+
+.dash-summary-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--dash-accent);
+  line-height: 1.3;
+}
+
+.dash-summary-delta {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.dash-summary-delta.up { color: var(--dash-success); }
+.dash-summary-delta.down { color: var(--dash-error); }
+
+/* ── Tabs ─────────────────────────────────────────────────────── */
+.dash-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--dash-border);
+  padding: 0 1.25rem;
+  flex-shrink: 0;
+}
+
+.dash-tab {
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--dash-text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.dash-tab:hover { color: var(--dash-text); }
+.dash-tab.active { color: var(--dash-accent); border-bottom-color: var(--dash-accent); }
+
+/* ── Body Layout ──────────────────────────────────────────────── */
+.dash-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.dash-chart-area {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+  padding: 0.5rem;
+}
+
+/* ── Detail Sidebar ───────────────────────────────────────────── */
+.dash-sidebar {
+  width: var(--dash-sidebar-width);
+  min-width: var(--dash-sidebar-width);
+  background: var(--dash-surface);
+  border-left: 1px solid var(--dash-border);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s ease, min-width 0.3s ease;
+  overflow: hidden;
+}
+
+.dash-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--dash-border);
+  flex-shrink: 0;
+}
+
+.dash-sidebar-header h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--dash-text);
+}
+
+.dash-sidebar-close {
+  background: none;
+  border: none;
+  color: var(--dash-text-muted);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+}
+
+.dash-sidebar-close:hover { color: var(--dash-text); }
+
+.dash-sidebar-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+}
+
+.dash-sidebar-placeholder {
+  text-align: center;
+  margin-top: 2rem;
+  color: var(--dash-text-muted);
+  font-size: 0.85rem;
+}
+
+/* ── Detail Fields ────────────────────────────────────────────── */
+.dash-field {
+  margin-bottom: 1rem;
+}
+
+.dash-field-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--dash-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.dash-field-value {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--dash-text);
+  line-height: 1.5;
+}
+
+.dash-field-highlight {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--dash-accent);
+}
+
+.dash-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--dash-surface-alt);
+  color: var(--dash-accent);
+}
+
+/* ── Tooltip ──────────────────────────────────────────────────── */
+.dash-tooltip {
+  background: var(--dash-surface);
+  border: 1px solid var(--dash-border);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.dash-tooltip-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--dash-text);
+  margin-bottom: 0.25rem;
+}
+
+.dash-tooltip-value {
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+/* ── Loading / Error / Empty States ───────────────────────────── */
+.dash-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  z-index: 15;
+  background: var(--dash-bg);
+}
+
+.dash-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--dash-border);
+  border-top-color: var(--dash-accent);
+  border-radius: 50%;
+  animation: dash-spin 0.8s linear infinite;
+}
+
+@keyframes dash-spin { to { transform: rotate(360deg); } }
+
+.dash-state-error {
+  color: var(--dash-error);
+  font-weight: 600;
+}
+
+.dash-state-hint {
+  font-size: 0.8rem;
+  color: var(--dash-text-muted);
+}
+
+.dash-retry {
+  padding: 0.4rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--dash-border);
+  background: var(--dash-surface-alt);
+  color: var(--dash-text);
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.dash-retry:hover { border-color: var(--dash-accent); }
+
+/* ── Filter Chips ─────────────────────────────────────────────── */
+.dash-filter-bar {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 1.25rem;
+}
+
+.dash-filter-chip {
+  padding: 0.3rem 0.7rem;
+  border-radius: 20px;
+  border: 1px solid var(--dash-border);
+  background: var(--dash-surface-alt);
+  color: var(--dash-text-muted);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.dash-filter-chip:hover { border-color: var(--dash-accent); color: var(--dash-text); }
+.dash-filter-chip.active { background: var(--dash-accent); border-color: var(--dash-accent); color: #fff; }
+
+/* ── Connections List (for graph sidebars) ────────────────────── */
+.dash-connections {
+  list-style: none;
+  padding: 0;
+}
+
+.dash-connections li {
+  padding: 0.5rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  margin-bottom: 0.3rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.dash-connections li:hover { background: var(--dash-surface-alt); }
+
+/* ── Responsive ───────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .dash-body {
+    flex-direction: column;
+  }
+
+  .dash-sidebar {
+    width: 100%;
+    min-width: 100%;
+    max-height: 50vh;
+    border-left: none;
+    border-top: 1px solid var(--dash-border);
+  }
+
+  .dash-summary-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .dash-summary-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .dash-summary-value {
+    font-size: 1.25rem;
+  }
+
+  .dash-sidebar {
+    max-height: 60vh;
+  }
+}
