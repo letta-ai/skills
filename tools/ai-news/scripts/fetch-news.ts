@@ -27,6 +27,7 @@ const RSS_FEEDS = [
   { name: "Simon Willison",       url: "https://simonwillison.net/atom/everything/" },
   { name: "Lilian Weng",          url: "https://lilianweng.github.io/index.xml" },
   { name: "Latent Space",         url: "https://www.latent.space/feed" },
+  { name: "AI Weekly",            url: "https://aiweekly.co/feed" },
 ];
 
 // YouTube channel IDs — channel RSS requires no API key
