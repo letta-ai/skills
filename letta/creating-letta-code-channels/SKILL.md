@@ -23,13 +23,13 @@ User plugins cannot shadow first-party ids: `telegram`, `slack`, and `discord` a
    - `~/.letta/channels/<id>/channel.json`
    - `~/.letta/channels/<id>/plugin.mjs`
    - `~/.letta/channels/<id>/accounts.json`
-4. Always implement `messageActions` if agents should reply via `MessageChannel`.
+4. Implement `messageActions` for both reply modes: explicit tool replies and automatic relay text use the common outbound adapter path.
 5. Start with `dmPolicy: "pairing"` for testing, or `allowlist`/`open` for known headless deployments.
 6. Test all four legs:
    - plugin discovery/import
    - inbound `adapter.onMessage(msg)` to route/pairing
    - routed channel notification reaches the agent
-   - outbound `MessageChannel` calls `messageActions.handleAction` → `adapter.sendMessage`
+   - outbound behavior matches the account's captured reply mode: explicit `MessageChannel` delivery in tool mode, or automatic finalized-text delivery in relay mode
 7. Run targeted tests, then `bun run typecheck`, `bun run lint`, `bun run build`.
 
 ## References
@@ -55,7 +55,9 @@ It creates `channel.json`, `plugin.mjs`, and `accounts.example.json`. Replace th
 
 ## Hard lessons
 
-- `MessageChannel` silently feels broken if `plugin.messageActions` is missing. Every plugin that should reply needs `describeMessageTool()` and `handleAction()`.
+- Accounts default to tool mode when `reply_mode` is unset or invalid. Add `"reply_mode": "relay"` to an existing saved account, preserving its actual ID, root fields, and credentials.
+- Relay requires a build containing [PR 4043](https://github.com/letta-ai/letta-code/pull/4043); v0.34.1 predates it. The on-device gateway implements delivery; remote hosts must supply transport and captured per-input policy. This is a host distinction, not an agent-state restriction. Mode changes affect new inputs, not active or queued ones.
+- A single-destination relay input sends finalized text without `MessageChannel`; unfinished error/cancel text, reasoning, and subagent output are excluded. Multi-destination inputs require explicit replies, never broadcasts. Queued inputs stay separate. Use tool mode for reactions, files, and proactive sends.
 - For public channels, suppress tool approval/control prompts unless there is verified operator routing. Posting approval prompts publicly leaks tool input and invites forged `approve` replies.
 - User plugin runtime resolution must not count parent/dev `node_modules`. Runtime modules should resolve from explicit runtime dirs only.
 - Headless pairing is CLI-first: `letta channels pair --channel <id> --code <code> --agent <agent-id> --conversation <conversation-id>`.
