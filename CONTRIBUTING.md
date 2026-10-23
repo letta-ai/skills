@@ -15,32 +15,31 @@ Consider contributing when you:
 
 1. **Search existing skills** - Check if similar knowledge already exists
 2. **Review the structure** - Understand where your skill fits in the hierarchy
-3. **Read the skill-creator guide** - See `development/patterns/skill-creator/SKILL.md` for best practices
+3. **Read the skill-development guide** - See [meta/skill-development/SKILL.md](meta/skill-development/SKILL.md) for best practices
 
 ## Creating a New Skill
 
 ### 1. Choose the Right Location
 
-Place your skill in the appropriate domain hierarchy:
+Place your skill in the appropriate category:
 
 ```
-ai/           - AI/ML related knowledge
-development/  - Software development
-design/       - Design and creative work
-operations/   - DevOps, deployment, monitoring
+letta/  - Letta product ecosystem
+tools/  - General tool integrations
+meta/   - Skills about the skill system
 ```
 
-Create new categories if none fit. Example:
-- `ai/agents/letta/my-skill/` - Letta-specific pattern
-- `development/python/async-patterns/` - Python async patterns
-- `design/accessibility/wcag-guide/` - Accessibility guidelines
+Use a flat skill directory within the category, for example:
+- `letta/my-skill/` - Letta-specific pattern
+- `tools/my-tool/` - Tool integration
+- `meta/my-skill-workflow/` - Skill-system workflow
 
 ### 2. Initialize Your Skill
 
 Use the skill creation script:
 
 ```bash
-python3 development/patterns/skill-creator/scripts/init_skill.py my-skill-name --path ./path/to/category/
+python3 meta/skill-development/scripts/init_skill.py my-skill-name --path ./path/to/category/
 ```
 
 This creates:
@@ -126,9 +125,9 @@ You're encouraged to improve existing skills as you discover new patterns:
 - Organization: `Refactor: reorganize [category]`
 
 Examples:
-- `Add: ai/agents/letta/multi-agent-coordinator`
-- `Update: ai/agents/letta/letta-agent-designer - add Gemini 2.5 Pro notes`
-- `Refactor: reorganize development/ structure`
+- `Add: letta/multi-agent-coordinator`
+- `Update: letta/agent-development - add Gemini 2.5 Pro notes`
+- `Refactor: reorganize tools/ structure`
 
 ### PR Description Should Include
 
@@ -141,7 +140,7 @@ Examples:
 ### Example PR Description
 
 ```markdown
-## Add: ai/models/gemini-2-5-pro-guide
+## Add: tools/gemini-2-5-pro-guide
 
 Adds a guide for effectively using Gemini 2.5 Pro in agent applications.
 
@@ -188,7 +187,7 @@ We aim to review PRs within 1 week.
 
 - Open an issue for clarification
 - Discuss in [Letta Community Forum](https://forum.letta.com)
-- Check `meta/skill-creator/SKILL.md` for skill creation guidance
+- Check [meta/skill-development/SKILL.md](meta/skill-development/SKILL.md) for skill creation guidance
 
 ## License
 
