@@ -7,7 +7,7 @@ import json
 import re
 import zipfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 
 def normalize_iso(value: object) -> str:
@@ -57,10 +57,21 @@ def load_conversations(export_path: Path) -> tuple[list[dict], str]:
     export_path = export_path.expanduser()
 
     if export_path.is_dir():
-        data = load_json(export_path, "conversations.json")
-        if not isinstance(data, list):
-            raise SystemExit(f"Expected conversations.json list in {export_path}")
-        return data, detect_schema(data)
+        monolithic_path = export_path / "conversations.json"
+        if monolithic_path.exists():
+            data = load_json(export_path, "conversations.json")
+            if not isinstance(data, list):
+                raise SystemExit(f"Expected conversations.json list in {export_path}")
+            return data, detect_schema(data)
+
+        shard_names = sorted(
+            path.name
+            for path in export_path.iterdir()
+            if path.is_file() and path.name.startswith("conversations-") and path.name.endswith(".json")
+        )
+        if shard_names:
+            rows = load_shards(shard_names, lambda name: load_json(export_path, name))
+            return rows, detect_schema(rows)
 
     if export_path.is_file() and export_path.suffix.lower() == ".zip":
         with zipfile.ZipFile(export_path) as zf:
@@ -73,14 +84,19 @@ def load_conversations(export_path: Path) -> tuple[list[dict], str]:
 
             shard_names = sorted(name for name in names if name.startswith("conversations-") and name.endswith(".json"))
             if shard_names:
-                rows: list[dict] = []
-                for shard_name in shard_names:
-                    shard = json.loads(zf.read(shard_name))
-                    if isinstance(shard, list):
-                        rows.extend(shard)
+                rows = load_shards(shard_names, lambda name: json.loads(zf.read(name)))
                 return rows, detect_schema(rows)
 
     raise SystemExit(f"Could not find conversation data in {export_path}")
+
+
+def load_shards(shard_names: list[str], read_shard: Callable[[str], Any]) -> list[dict]:
+    rows: list[dict] = []
+    for shard_name in shard_names:
+        shard = read_shard(shard_name)
+        if isinstance(shard, list):
+            rows.extend(shard)
+    return rows
 
 
 def detect_schema(conversations: list[dict]) -> str:
