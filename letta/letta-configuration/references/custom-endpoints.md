@@ -41,6 +41,7 @@ This configuration works with:
 | LocalAI | `http://localhost:8080/v1` | Drop-in replacement |
 | Ollama | `http://localhost:11434/v1` | Use `ollama/` prefix instead |
 | Text Generation Inference | `http://localhost:8080/v1` | Hugging Face TGI |
+| [Bifrost](https://github.com/maximhq/bifrost) | `http://localhost:8080/v1` | Open-source gateway; one endpoint for many providers via `provider/model` names |
 
 ## vLLM Example
 
