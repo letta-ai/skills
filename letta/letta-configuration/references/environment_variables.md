@@ -368,6 +368,11 @@ For custom OpenAI-compatible endpoints, use `base_url`:
 OPENAI_API_KEY=sk-...
 OPENAI_BASE_URL=http://localhost:4000/v1
 
+# Example: Bifrost (https://github.com/maximhq/bifrost)
+# Use a Bifrost virtual key, or any placeholder if virtual keys are not enforced
+OPENAI_API_KEY=sk-bf-...
+OPENAI_BASE_URL=http://localhost:8080/v1
+
 # Example: Text Generation WebUI
 OPENAI_API_KEY=placeholder
 OPENAI_BASE_URL=http://localhost:5000/v1
