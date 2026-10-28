@@ -73,7 +73,7 @@ def chunk_markdown(text: str, *, max_chars: int) -> list[str]:
 def add_frontmatter(markdown: str, *, description: str, limit: int) -> str:
     frontmatter = [
         "---",
-        f"description: {description}",
+        f"description: {json.dumps(description, ensure_ascii=False)}",
         f"limit: {limit}",
         "---",
         "",
