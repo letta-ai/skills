@@ -174,12 +174,12 @@ function readJpegSize(buf) {
 
 function parseSvgSize(buf) {
   const text = buf.toString("utf8");
-  const a = text.indexOf("<svg");
-  const b = text.indexOf("</svg>");
-  const inner = a !== -1 && b !== -1 ? text.slice(a, b + 6) : text;
-  const widthMatch = inner.match(/\bwidth\s*=\s*"([^"]+)"/i);
-  const heightMatch = inner.match(/\bheight\s*=\s*"([^"]+)"/i);
-  const viewBoxMatch = inner.match(/\bviewBox\s*=\s*"([^"]+)"/i);
+  // Child shapes and data-width/data-height are not the SVG viewport.
+  // Keep quoted '>' characters inside the opening tag and accept both XML quotes.
+  const rootTag = text.match(/<svg\b(?:[^"'<>]|"[^"]*"|'[^']*')*>/i)?.[0] || "";
+  const widthMatch = rootTag.match(/\swidth\s*=\s*(["'])(.*?)\1/is);
+  const heightMatch = rootTag.match(/\sheight\s*=\s*(["'])(.*?)\1/is);
+  const viewBoxMatch = rootTag.match(/\sviewBox\s*=\s*(["'])(.*?)\1/is);
 
   function toPx(v) {
     if (!v) return null;
@@ -209,10 +209,10 @@ function parseSvgSize(buf) {
     }
   }
 
-  let widthPx = widthMatch ? toPx(widthMatch[1]) : null;
-  let heightPx = heightMatch ? toPx(heightMatch[1]) : null;
+  let widthPx = widthMatch ? toPx(widthMatch[2]) : null;
+  let heightPx = heightMatch ? toPx(heightMatch[2]) : null;
   if ((widthPx == null || heightPx == null) && viewBoxMatch) {
-    const parts = viewBoxMatch[1].trim().split(/\s+/).map(Number);
+    const parts = viewBoxMatch[2].trim().split(/[\s,]+/).map(Number);
     if (parts.length === 4) {
       const vbw = parts[2];
       const vbh = parts[3];
