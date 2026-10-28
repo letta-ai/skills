@@ -15,6 +15,7 @@ from common import (
     normalize_iso,
     role_matches,
     snippet,
+    sort_key_for_time,
 )
 
 
@@ -65,7 +66,7 @@ def main() -> None:
                 }
             )
 
-    rows.sort(key=lambda row: (row["updated"], row["created"]), reverse=True)
+    rows.sort(key=lambda row: (sort_key_for_time(row["updated"]), sort_key_for_time(row["created"])), reverse=True)
     total = len(rows)
     rows = rows[: args.limit]
 

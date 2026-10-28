@@ -14,6 +14,7 @@ from common import (
     conversation_updated,
     load_conversations,
     normalize_iso,
+    sort_key_for_time,
 )
 
 
@@ -71,7 +72,7 @@ def main() -> None:
     elif args.sort == "messages":
         rows.sort(key=lambda row: row["messages"], reverse=reverse)
     else:
-        rows.sort(key=lambda row: row[args.sort], reverse=reverse)
+        rows.sort(key=lambda row: sort_key_for_time(row[args.sort]), reverse=reverse)
 
     total = len(rows)
     rows = rows[: args.limit]

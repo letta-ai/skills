@@ -14,6 +14,7 @@ from common import (
     load_conversations,
     load_json,
     normalize_iso,
+    sort_key_for_time,
 )
 
 
@@ -30,8 +31,8 @@ def render_markdown(export_path: Path, conversations: list[dict], schema: str) -
         f"- Source: `{export_path}`",
         f"- Schema: `{schema}`",
         f"- Conversations: {len(conversations)}",
-        f"- Created span: {min(created_values) if created_values else '-'} → {max(created_values) if created_values else '-'}",
-        f"- Updated span: {min(updated_values) if updated_values else '-'} → {max(updated_values) if updated_values else '-'}",
+        f"- Created span: {min(created_values, key=sort_key_for_time) if created_values else '-'} → {max(created_values, key=sort_key_for_time) if created_values else '-'}",
+        f"- Updated span: {min(updated_values, key=sort_key_for_time) if updated_values else '-'} → {max(updated_values, key=sort_key_for_time) if updated_values else '-'}",
         "",
     ]
 
@@ -83,7 +84,7 @@ def render_markdown(export_path: Path, conversations: list[dict], schema: str) -
         "## Sample recent conversations",
         "",
     ])
-    recent = sorted(conversations, key=lambda c: normalize_iso(conversation_updated(c, schema)), reverse=True)[:10]
+    recent = sorted(conversations, key=lambda c: sort_key_for_time(conversation_updated(c, schema)), reverse=True)[:10]
     for conversation in recent:
         title = conversation_title(conversation, schema)
         updated = normalize_iso(conversation_updated(conversation, schema))

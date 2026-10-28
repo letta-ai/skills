@@ -33,6 +33,14 @@ def normalize_iso(value: object) -> str:
 
 def sort_key_for_time(value: object) -> tuple[int, str]:
     text = normalize_iso(value)
+    if text != "-":
+        try:
+            instant = dt.datetime.fromisoformat(text)
+            if instant.tzinfo is None:
+                instant = instant.replace(tzinfo=dt.timezone.utc)
+            text = instant.astimezone(dt.timezone.utc).isoformat()
+        except (ValueError, OverflowError):
+            pass  # Keep unrecognized timestamps sortable without changing their display.
     return (1 if text != "-" else 0, text)
 
 
