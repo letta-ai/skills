@@ -11,7 +11,9 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import sys
+import tempfile
 import time
 from typing import Any, Dict, List, Optional
 
@@ -204,12 +206,20 @@ def _write_audio(
         _die(f"Output already exists: {out_path} (use --force to overwrite)")
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    destination = out_path.resolve()
 
     last_exc: Optional[Exception] = None
     for attempt in range(1, attempts + 1):
         try:
-            with client.audio.speech.with_streaming_response.create(**payload) as response:
-                response.stream_to_file(out_path)
+            with tempfile.TemporaryDirectory(prefix=".speech-", dir=destination.parent) as temporary:
+                pending = Path(temporary) / "audio"
+                with client.audio.speech.with_streaming_response.create(**payload) as response:
+                    response.stream_to_file(pending)
+                if destination.exists():
+                    if not force:
+                        raise FileExistsError(f"Output already exists: {out_path} (use --force to overwrite)")
+                    shutil.copymode(destination, pending)
+                pending.replace(destination)
             print(f"Wrote {out_path}")
             return
         except Exception as exc:
