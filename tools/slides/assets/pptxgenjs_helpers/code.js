@@ -48,13 +48,19 @@ function loadPrismLanguage(lang) {
 function buildThemeMap(themeCssModule = "prismjs/themes/prism-okaidia.css") {
   try {
     const css = fs.readFileSync(require.resolve(themeCssModule), "utf8");
-    return Object.fromEntries(
-      [
-        ...css.matchAll(
-          /\.token\.([\w-]+)[^{]*\{[^}]*color:\s*([^;\s]+)[^}]*\}/g
-        ),
-      ].map(([, t, c]) => [t, c.replace(/#|!important/g, "").trim()])
-    );
+    const theme = {};
+    const rules = css.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/([^{}]+)\{([^{}]*)\}/g);
+    for (const [, selectors, declarations] of rules) {
+      const color = declarations.match(/(?:^|;)\s*color:\s*([^;\s]+)/);
+      if (!color) continue;
+      for (const selector of selectors.split(",")) {
+        // This map is language-independent; scoped CSS rules must not override
+        // a token's global color in every language.
+        const token = selector.trim().match(/^\.token\.([\w-]+)$/);
+        if (token) theme[token[1]] = color[1].replace(/#|!important/g, "").trim();
+      }
+    }
+    return theme;
   } catch (err) {
     return { plain: "FFFFFF", comment: "999999" };
   }
