@@ -105,12 +105,13 @@ def print_info(msg: str):
 def refresh_conversations(state: AppState):
     """Refresh the list of conversations from the server."""
     convs = state.client.conversations.list(agent_id=state.agent_id)
+    names = {conv.id: conv.name for conv in state.conversations}
     state.conversations = []
     
     for i, conv in enumerate(convs):
-        # Generate a friendly name
+        # Retain session-local names, including labels supplied to /new.
         created = conv.created_at
-        name = f"Conversation {i + 1} ({created.strftime('%m/%d %H:%M')})"
+        name = names.get(conv.id) or f"Conversation {i + 1} ({created.strftime('%m/%d %H:%M')})"
         
         info = ConversationInfo(
             id=conv.id,
