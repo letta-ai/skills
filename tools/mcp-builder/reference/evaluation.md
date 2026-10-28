@@ -389,8 +389,11 @@ After creating your evaluation file, you can use the provided evaluation harness
 
    Or install manually:
    ```bash
-   pip install anthropic mcp
+   pip install 'anthropic>=0.39.0' 'mcp>=1.30.0,<2'
    ```
+
+   The harness uses the MCP SDK v1 API. Keep the `<2` constraint when
+   installing manually; MCP 2.x removes APIs used by the bundled scripts.
 
 2. **Set API Key**
 

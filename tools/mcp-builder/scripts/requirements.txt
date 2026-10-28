@@ -1,2 +1,3 @@
 anthropic>=0.39.0
-mcp>=1.1.0
+# The bundled harness and Python examples use the MCP SDK v1 APIs.
+mcp>=1.30.0,<2

@@ -34,13 +34,16 @@ async def tool_function(params: InputModel) -> str:
 
 ## MCP Python SDK and FastMCP
 
+These examples target MCP SDK v1 (`mcp>=1.30.0,<2`). Install that range before
+using the examples; MCP 2.x renames FastMCP and changes its API.
+
 The official MCP Python SDK provides FastMCP, a high-level framework for building MCP servers. It provides:
 - Automatic description and inputSchema generation from function signatures and docstrings
 - Pydantic model integration for input validation
 - Decorator-based tool registration with `@mcp.tool`
 
 **For complete SDK documentation, use WebFetch to load:**
-`https://raw.githubusercontent.com/modelcontextprotocol/python-sdk/main/README.md`
+`https://py.sdk.modelcontextprotocol.io/v1/`
 
 ## Server Naming Convention
 
