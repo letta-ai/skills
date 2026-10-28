@@ -33,10 +33,12 @@ def _load_images_with_placeholders(
 ) -> tuple[list[str], list[Image.Image | None]]:
     labels = [basename(p) for p in input_files]
     images: list[Image.Image | None] = []
+    # Decode into independent images before closing source files or removing conversions.
     if retain_converted_files:
         for p in input_files:
             try:
-                images.append(Image.open(ensure_raster_image(p)))
+                with Image.open(ensure_raster_image(p)) as image:
+                    images.append(image.copy())
             except Exception as e:
                 if fail_on_image_error:
                     raise
@@ -46,7 +48,8 @@ def _load_images_with_placeholders(
         with tempfile.TemporaryDirectory(prefix="montage_convert_") as tmp_conv:
             for p in input_files:
                 try:
-                    images.append(Image.open(ensure_raster_image(p, tmp_conv)))
+                    with Image.open(ensure_raster_image(p, tmp_conv)) as image:
+                        images.append(image.copy())
                 except Exception as e:
                     if fail_on_image_error:
                         raise
