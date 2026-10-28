@@ -9,24 +9,25 @@ function readInputAsBuffer(source) {
   if (!source) throw new Error("Image source is empty");
   if (Buffer.isBuffer(source)) return { buffer: source, type: "buffer" };
   if (typeof source === "string") {
-    // data URI (we primarily emit base64 data URIs for SVG via helpers)
+    // Data URI: percent-decode octets, then decode base64 only when marked.
     if (source.startsWith("data:")) {
       const type = "dataUri";
       const comma = source.indexOf(",");
-      const payload = comma !== -1 ? source.slice(comma + 1) : source;
-      // Our helpers use base64; if not, try URI decode then treat as raw text
-      try {
-        return { buffer: Buffer.from(payload, "base64"), type: type };
-      } catch (_e) {
-        try {
-          return {
-            buffer: Buffer.from(decodeURIComponent(payload), "utf8"),
-            type: type,
-          };
-        } catch (_e2) {
-          return { buffer: Buffer.from(payload, "utf8"), type: type };
-        }
-      }
+      if (comma === -1) throw new Error("Image data URI is missing a comma");
+      const header = source.slice(0, comma);
+      const payload = source.slice(comma + 1);
+      // Decode byte-by-byte so non-UTF-8 raster bytes are preserved too.
+      const decoded = Buffer.concat(payload.split(/(%[0-9a-f]{2})/gi).map(part =>
+        /^%[0-9a-f]{2}$/i.test(part)
+          ? Buffer.from([parseInt(part.slice(1), 16)])
+          : Buffer.from(part, "utf8")
+      ));
+      return {
+        buffer: /;base64$/i.test(header)
+          ? Buffer.from(decoded.toString("ascii"), "base64")
+          : decoded,
+        type,
+      };
     }
     // Raw inline SVG string
     if (source.includes("<svg")) {
