@@ -647,18 +647,41 @@ async def query_data(query: str, ctx: Context) -> str:
 
 FastMCP supports different transport mechanisms:
 
+Choose one of these separate entry points. Register your tools on the `mcp`
+instance before calling `run`. In MCP SDK v1, configure the listening port in
+the `FastMCP` constructor, not in `run`.
+
+**Stdio (default):**
+
 ```python
-# Default: Stdio transport (for CLI tools)
+from mcp.server.fastmcp import FastMCP
+
+mcp = FastMCP("example_mcp")
+
 if __name__ == "__main__":
     mcp.run()
+```
 
-# HTTP transport (for web services)
-if __name__ == "__main__":
-    mcp.run(transport="streamable_http", port=8000)
+**Streamable HTTP:**
 
-# SSE transport (for real-time updates)
+```python
+from mcp.server.fastmcp import FastMCP
+
+mcp = FastMCP("example_mcp", port=8000)
+
 if __name__ == "__main__":
-    mcp.run(transport="sse", port=8000)
+    mcp.run(transport="streamable-http")
+```
+
+**SSE:**
+
+```python
+from mcp.server.fastmcp import FastMCP
+
+mcp = FastMCP("example_mcp", port=8000)
+
+if __name__ == "__main__":
+    mcp.run(transport="sse")
 ```
 
 **Transport selection:**
