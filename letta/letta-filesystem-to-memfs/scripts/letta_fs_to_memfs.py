@@ -211,50 +211,27 @@ def chunk_text(text: str, max_chars: int, overlap: int) -> list[Chunk]:
         raise ValueError("overlap must be non-negative and smaller than chunk size")
 
     text = normalize_text(text)
-    paragraphs = re.split(r"(\n\s*\n)", text)
-    units: list[str] = []
-    for i in range(0, len(paragraphs), 2):
-        para = paragraphs[i]
-        sep = paragraphs[i + 1] if i + 1 < len(paragraphs) else ""
-        unit = para + sep
-        if not unit.strip():
-            continue
-        if len(unit) <= max_chars:
-            units.append(unit)
-        else:
-            start = 0
-            while start < len(unit):
-                units.append(unit[start : start + max_chars])
-                start += max_chars
-
     chunks: list[Chunk] = []
-    current = ""
-    approx_start = 0
-    consumed = 0
+    content_end = len(text.rstrip())
+    start = 0
+    while start < content_end:
+        end = min(start + max_chars, len(text))
+        if end < len(text):
+            # Keep paragraph boundaries when possible, but leave enough new
+            # content to advance even when overlap is close to max_chars.
+            for boundary in re.finditer(r"\n\s*\n", text[start:end]):
+                if boundary.end() > max(200, overlap):
+                    end = start + boundary.end()
 
-    def emit(buf: str, start: int) -> None:
-        if not buf.strip():
-            return
-        idx = len(chunks) + 1
-        chunks.append(Chunk(index=idx, text=buf.strip() + "\n", char_start=start, char_end=start + len(buf)))
-
-    for unit in units:
-        if current and len(current) + len(unit) > max_chars:
-            if len(current.strip()) < max(200, overlap):
-                current += unit
-                consumed += len(unit)
-                continue
-            emit(current, approx_start)
-            tail = current[-overlap:] if overlap else ""
-            approx_start = max(0, consumed - len(tail))
-            current = tail + unit
-        else:
-            if not current:
-                approx_start = consumed
-            current += unit
-        consumed += len(unit)
-
-    emit(current, approx_start)
+        content = text[start:end].strip()
+        if content:
+            # A full window has no room for an extra formatting newline.
+            if len(content) < max_chars:
+                content += "\n"
+            chunks.append(Chunk(index=len(chunks) + 1, text=content, char_start=start, char_end=end))
+        if end >= content_end:
+            break
+        start = end - overlap
     return chunks
 
 
